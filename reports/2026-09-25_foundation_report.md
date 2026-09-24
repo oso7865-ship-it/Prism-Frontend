@@ -3,7 +3,7 @@
 > 작성일: 2026-09-25
 > 패키징/배포일: 해당 없음
 > 작업 브랜치: main
-> 커밋/PR: 미커밋
+> 커밋/PR: 4a41bf8 (최초 구현), 후속 검증 수정은 working-tree
 > 상태 기록 버전: 1
 > 상태 확인 시각: 2026-09-25T03:10:00+09:00
 > 구현 상태: 완료
@@ -11,9 +11,9 @@
 > 로컬 검증 상태: 완료
 > 로컬 검증 대상: 최초 개발 기반 working-tree
 > 로컬 검증 근거: vue-tsc와 Vite production build 통과; Vitest 3개 통과; npm audit 0개 취약점.
-> 병합 상태: 미확인
+> 병합 상태: 완료
 > 병합 대상: origin/main
-> 병합 근거: 신규 저장소 첫 커밋 게시 전. 이후 기능 작업은 PR 사용.
+> 병합 근거: 신규 저장소 origin/main에 4a41bf8 최초 커밋 push 확인. PR 병합 사건은 없음.
 > 배포 상태: 미수행
 > 배포 근거: 공개 저장소 업로드만 요청됨. 서비스 배포 제외.
 > 실제 연동 상태: 미수행
@@ -62,3 +62,7 @@ vue-tsc와 Vite production build 통과; Vitest 3개 통과; npm audit 0개 취�
 CI 결과를 확인하고 GitHub 로그인·User·Workspace 흐름으로 진행한다. 원본 아키텍처의 소유 문서와 영역별 ADR을 갱신한다.
 
 하네스의 파일명 정책에 따라 비밀 값 없는 설정 예시는 config/development.example로 제공한다. 실제 .env는 추적하지 않으며 비밀 검사 규칙을 완화하지 않았다.
+
+## 후속 검증
+
+최초 CI 36039592514에서 Vitest가 GENERAL_HARNESS의 node:test 파일을 잘못 수집해 실패했다. vitest.config.ts의 include를 제품 tests/**/*.test.ts로 지정하여 수정했다. 원본 하네스 테스트는 Node test runner 소유이며 삭제하거나 변조하지 않았다. 브라우저에서 준비 화면과 연결 확인 클릭 후 서버 연결 실패 안내를 확인했다.
