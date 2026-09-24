@@ -34,3 +34,7 @@ src/app은 앱 진입·라우터·현재 준비 화면, src/shared/api는 기술
 작업 시작: git status로 로컬 변경 확인 → 깨끗한 상태에서 git pull --ff-only → 의존성 잠금 기준 설치 → 최신 Report의 미해결 항목 확인. 작업 종료: 검증 → Report/Working Context 갱신 → 커밋·푸시. 비밀 값과 가상환경·node_modules는 Git에 올리지 않습니다.
 
 하네스 연결 검사: `node GENERAL_HARNESS/scripts/validate-project-adapter.mjs --project-root . --require-adapter --strict --json`.
+
+## 확인된 검증 기록
+
+[초기 구현 CI](https://github.com/oso7865-ship-it/Prism-Frontend/actions/runs/36039823516) 통과. production build·타입 검사·제품 테스트 3개 통과. 브라우저 준비 화면과 서버 연결 실패 안내도 확인했다.

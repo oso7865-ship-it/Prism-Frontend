@@ -3,9 +3,9 @@
 > 작성일: 2026-09-25
 > 패키징/배포일: 해당 없음
 > 작업 브랜치: main
-> 커밋/PR: 4a41bf8 (최초 구현), 후속 검증 수정은 working-tree
+> 커밋/PR: e3bc636 (검증한 구현 커밋)
 > 상태 기록 버전: 1
-> 상태 확인 시각: 2026-09-25T03:10:00+09:00
+> 상태 확인 시각: 2026-09-25T03:15:57+09:00
 > 구현 상태: 완료
 > 구현 근거: 현재 working-tree의 앱 골격·설정·테스트·CI·하네스 어댑터
 > 로컬 검증 상태: 완료
@@ -13,7 +13,7 @@
 > 로컬 검증 근거: vue-tsc와 Vite production build 통과; Vitest 3개 통과; npm audit 0개 취약점.
 > 병합 상태: 완료
 > 병합 대상: origin/main
-> 병합 근거: 신규 저장소 origin/main에 4a41bf8 최초 커밋 push 확인. PR 병합 사건은 없음.
+> 병합 근거: origin/main에 e3bc636 게시 확인. 새 저장소 초기 직접 push이며 PR 병합 사건은 없음.
 > 배포 상태: 미수행
 > 배포 근거: 공개 저장소 업로드만 요청됨. 서비스 배포 제외.
 > 실제 연동 상태: 미수행
@@ -66,3 +66,9 @@ CI 결과를 확인하고 GitHub 로그인·User·Workspace 흐름으로 진행�
 ## 후속 검증
 
 최초 CI 36039592514에서 Vitest가 GENERAL_HARNESS의 node:test 파일을 잘못 수집해 실패했다. vitest.config.ts의 include를 제품 tests/**/*.test.ts로 지정하여 수정했다. 원본 하네스 테스트는 Node test runner 소유이며 삭제하거나 변조하지 않았다. 브라우저에서 준비 화면과 연결 확인 클릭 후 서버 연결 실패 안내를 확인했다.
+
+## 원격 검증 확정
+
+[e3bc636 GitHub CI](https://github.com/oso7865-ship-it/Prism-Frontend/actions/runs/36039823516) success 확인. Node 24에서 npm ci·타입 검사·build·Vitest 3개·하네스 어댑터·시크릿·작업 기록 검사 통과.
+
+남은 작업은 로컬 Docker 구동 확인과 실제 업무 기능이다. 운영 배포 및 외부 API 연동은 하지 않았다. 원본 HARNESS의 공백 서식은 그대로 보존했고 내용 수정은 manifest.localChanges에 선언한 부착 상태만 적용했다.
