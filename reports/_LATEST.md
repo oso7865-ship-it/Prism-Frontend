@@ -1,3 +1,3 @@
 # Latest project report
 
-[개발 기반](2026-09-25_foundation_report.md)
+[GitHub 로그인 구현](2026-09-25_github-login_report.md)

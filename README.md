@@ -1,6 +1,6 @@
 # PRism Frontend
 
-Vue 3 / TypeScript / Vite / Vue Router 개발 기반입니다. 현재 화면은 개발 환경 확인용이며 로그인·PR 목록·분석 화면은 아직 없습니다. Node 24와 npm을 사용하고 package-lock.json을 공유합니다.
+Vue 3 / TypeScript / Vite / Vue Router 개발 기반입니다. GitHub 로그인·내 프로필·세션 복원·로그아웃 화면을 구현했습니다. PR 목록·분석 화면은 후속입니다. Node 24와 npm을 사용하고 package-lock.json을 공유합니다.
 
 ## 실행
 
@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-http://127.0.0.1:5173 에서 확인합니다. 연결 확인 버튼은 `/health/ready`를 호출합니다. 기본 프록시 대상은 http://127.0.0.1:8000 이며 백엔드와 PostgreSQL이 준비됐을 때만 연결 완료를 표시합니다. `config/development.example`의 API_PROXY_TARGET으로 로컬 대상만 바꿀 수 있습니다. 실제 응답이 없으면 가짜 성공을 표시하지 않습니다.
+**http://localhost:5173** 에서 확인합니다. OAuth callback과 쿠키 호스트를 맞추기 위해 브라우저에서 127.0.0.1과 혼용하지 않습니다. 연결 확인 버튼은 `/health/ready`를 호출합니다. 기본 프록시 대상은 http://127.0.0.1:8000 이며 백엔드와 PostgreSQL이 준비됐을 때만 연결 완료를 표시합니다. `config/development.example`의 API_PROXY_TARGET으로 로컬 대상만 바꿀 수 있습니다. 실제 응답이 없으면 가짜 성공을 표시하지 않습니다.
 
 ## 검증
 
@@ -21,9 +21,9 @@ npm test
 npm audit
 ```
 
-build는 vue-tsc 타입 검사와 production bundle 생성을 포함합니다. 테스트는 readiness 성공·503·잘못된 응답을 검증합니다. 프록시는 Vite 개발 서버용이며 production Vercel rewrite와 도메인은 아직 구성하지 않았습니다. 서버 자격증명을 VITE_*에 넣지 않습니다.
+build는 vue-tsc 타입 검사와 production bundle 생성을 포함합니다. 테스트는 readiness와 refresh single-flight·만료 재시도·logout 실패/경쟁을 검증합니다. 현재 8개 통과. 프록시는 Vite 개발 서버용이며 production Vercel rewrite와 도메인은 아직 구성하지 않았습니다. 서버 자격증명을 VITE_*에 넣지 않습니다.
 
-src/app은 앱 진입·라우터·현재 준비 화면, src/shared/api는 기술 공통 API 계약을 소유합니다. 실제 화면 기능은 구현할 때 src/features에 생성합니다. 현 단계는 제품 디자인 확정이 아니라 실행 골격입니다. 다음 작업은 백엔드 인증 계약과 함께 로그인 흐름을 구현하는 것입니다.
+src/app은 앱 진입·라우터·현재 준비 화면, src/shared/api는 기술 공통 API 계약을 소유합니다. 실제 화면 기능은 구현할 때 src/features에 생성합니다. 현 단계는 제품 디자인 확정이 아니라 실행 골격입니다. 다음 작업은 실제 GitHub 로그인 수동 확인과 Workspace 흐름입니다.
 
 ## 하네스와 다른 PC에서 재개
 
@@ -38,3 +38,14 @@ src/app은 앱 진입·라우터·현재 준비 화면, src/shared/api는 기술
 ## 확인된 검증 기록
 
 [초기 구현 CI](https://github.com/oso7865-ship-it/Prism-Frontend/actions/runs/36039823516) 통과. production build·타입 검사·제품 테스트 3개 통과. 브라우저 준비 화면과 서버 연결 실패 안내도 확인했다.
+
+## 로그인 테스트
+
+백엔드도 함께 실행하고 AUTH_ENABLED·OAuth 키·JWT 서명키·DB를 설정해야 합니다. 기본 callback은 http://localhost:8000/api/v1/auth/github/callback 입니다. 프론트에 Secret이나 JWT 서명키를 넣지 않습니다.
+
+1. localhost:5173에서 GitHub로 로그인 → 동의 → 이름/@login 확인.
+2. 새로고침 → 로그인 유지 확인.
+3. 로그아웃 → 새로고침 후에도 비로그인 확인.
+4. GitHub 동의 취소 → 취소 안내와 다시 로그인 확인.
+
+Access는 메모리, Refresh는 HttpOnly 쿠키입니다. single-flight는 한 탭 내에서 적용됩니다. 실제 로그인·새로고침 유지·로그아웃은 사용자 확인 완료입니다. [작업 리포트](reports/2026-09-25_github-login_report.md)에 자동 검증과 남은 항목을 구분해 기록했습니다.

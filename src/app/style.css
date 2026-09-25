@@ -8,3 +8,8 @@ section { background: white; border: 1px solid #dce1ee; border-radius: 16px; mar
 button { background: #354bc4; color: white; border: 0; border-radius: 8px; padding: 12px 20px; font: inherit; cursor: pointer; }
 button:disabled { opacity: .6; cursor: wait; }
 button:focus-visible { outline: 3px solid #203080; outline-offset: 4px; }
+.login-link { display: inline-block; background: #354bc4; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; margin: 0 12px 12px 0; }
+.login-link:focus-visible { outline: 3px solid #203080; outline-offset: 4px; }
+.secondary { background: #edf0fa; color: #26376e; margin: 0 0 12px 12px; }
+section p { overflow-wrap: anywhere; line-height: 1.6; }
+@media (max-width: 480px) { main { margin: 3vh auto; padding: 16px; } section { padding: 20px; } .secondary { margin-left: 0; } }
