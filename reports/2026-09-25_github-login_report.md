@@ -2,7 +2,7 @@
 
 > 작성일: 2026-09-25
 > 작업 브랜치: main
-> 커밋/PR: 사용자 요청에 따라 게시 진행 중
+> 커밋/PR: 4e1c92f69a37cd5890bf0017f03e2b1d02824234 (main 직접 게시)
 > 상태 기록 버전: 1
 > 상태 확인 시각: 2026-09-26T00:32:07+09:00
 > 구현 상태: 완료
@@ -10,15 +10,15 @@
 > 로컬 검증 상태: 완료
 > 로컬 검증 대상: GitHub 로그인 미커밋 working-tree
 > 로컬 검증 근거: npm run build(typecheck 포함)와 npm test 8 passed
-> 병합 상태: 진행 중
+> 병합 상태: 완료
 > 병합 대상: origin/main
-> 병합 근거: 2026-09-26 사용자 커밋·푸시 요청. origin/main과 동일 기준 확인, 일반 push 예정
+> 병합 근거: 사용자 요청에 따라 4e1c92f69a37cd5890bf0017f03e2b1d02824234을 origin/main에 일반 push 완료
 > 배포 상태: 해당 없음
 > 배포 근거: 로컬 개발 단계
 > 실제 연동 상태: 완료
 > 실제 연동 근거: 사용자 화면에서 실제 로그인·프로필·API/DB 연결 확인, 이어 새로고침 유지와 로그아웃 후 새로고침 모두 정상이라고 사용자 확인. 취소/다중 계정/운영 연동까지 검증한 것은 아님
 > 작업 범위: L
-> 적용 스킬: planning, verification-loop, ui-ux-design, troubleshooting-report
+> 적용 스킬: planning, verification-loop, ui-ux-design
 > 적용 Gate: Security Gate, API Gate, Document Gate, UI/UX Gate
 > 위험도: 인증
 > 위험 작업 여부: 예
@@ -71,7 +71,7 @@ UI: 기존 스타일 유지, 로그인 primary link·프로필·로그아웃·�
 
 ## 6. 미해결 항목
 
-로그인 취소·다중 계정 등 확장 수동 체크, Windows 네이티브 진단 원인, 다중 탭 간 refresh 동기화(현재 한 탭 single-flight), 운영 HTTPS/Secure/프록시 검증, 로컬 OAuth 키 배포 전 교체. Workspace는 다음 단계다. 현재 게시·CI 확인 진행 중이며 결과는 아래 게시 기록을 따른다.
+로그인 취소·다중 계정 등 확장 수동 체크, Windows 네이티브 진단 원인, 다중 탭 간 refresh 동기화(현재 한 탭 single-flight), 운영 HTTPS/Secure/프록시 검증, 로컬 OAuth 키 배포 전 교체. Workspace는 다음 단계다. 게시 완료. CI 결과는 아래 게시 기록을 따른다.
 
 ## 7. Working Context 반영 여부
 
@@ -83,4 +83,6 @@ UI: 기존 스타일 유지, 로그인 primary link·프로필·로그아웃·�
 
 ## 9. 2026-09-26 게시 기록
 
-사용자 기본 로그인 테스트 확인 후 백엔드·프론트 각각 main 게시. 자동 승인 검토가 하네스 변경을 포함한 게시를 거절하여 게시 범위를 로그인 구현과 제품 문서로 축소했다. GENERAL_HARNESS·PROJECT_HARNESS 및 기존 트러블슈팅 스킬 리포트 변경은 로컬에 보존하고 이번 게시에서 제외한다. 실제 비밀값·.env·DB 볼륨 제외. 현재 커밋/푸시·CI 진행 중.
+사용자 기본 로그인 테스트 확인 후 백엔드·프론트 각각 main 게시. 자동 승인 검토가 하네스 변경을 포함한 게시를 거절하여 게시 범위를 로그인 구현과 제품 문서로 축소했다. GENERAL_HARNESS·PROJECT_HARNESS 및 기존 트러블슈팅 스킬 리포트 변경은 로컬에 보존하고 이번 게시에서 제외한다. 실제 비밀값·.env·DB 볼륨 제외. 구현 커밋 4e1c92f69a37cd5890bf0017f03e2b1d02824234 일반 push 완료.
+
+프론트 최초 CI는 빌드·테스트를 통과했으나 로컬에만 있는 troubleshooting-report 스킬의 헤더 참조로 SKILL_UNKNOWN 실패했다. 게시된 스킬 목록에 맞춰 헤더를 수정했다. 로컬 스킬을 참고한 문제 기록 본문은 보존하고 하네스 동기화는 계속 보류한다. 수정 커밋 CI 확인 예정.
