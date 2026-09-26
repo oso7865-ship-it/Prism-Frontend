@@ -284,3 +284,15 @@
 - 개발 기반을 공개 origin/main에 게시했고 CI가 통과했다. 상세 증거는 프로젝트 루트 reports의 최신 기록을 확인한다.
 - Docker 로컬 실행, GitHub OAuth/App, DeepSeek와 배포는 후속 작업이다.
 - 트러블슈팅 기록 스킬을 로컬 반영했다(활성 21개). 원본 기준 SHA 이후 미커밋 패치이며 manifest.localChanges에 선언했다. 상세 기록은 프로젝트 루트 reports의 최신 포인터를 따른다.
+
+## 2026-09-25 상태 요약
+
+- GitHub 로그인·프로필·refresh·logout과 Vue 화면 구현. 기본 실제 로그인·새로고침·로그아웃 사용자 확인 완료. 게시·CI 확인 진행 중.
+- 백엔드 47 tests / 프론트 8 tests 및 build/typecheck 통과. Windows 네이티브 DB 진단 원인은 미확정으로 Report에 기록.
+- Docker 런타임 소켓을 백업·재생성해 PostgreSQL healthy 복구. 볼륨/설정 보존.
+- 로컬 브라우저는 localhost:5173, callback localhost:8000. 다른 호스트 이름 혼용 금지.
+- 다음: 게시·CI 확인→Workspace 서비스. 하네스 동기화 보류.
+
+## 2026-09-26 UI 페이지 분리
+
+- 로그인/메인/저장소와 PR/팀 설정 경로 분리, 반응형 UI, 타입검사·빌드·23 tests 통과. 실제 OAuth 재로그인 미확인; 최신 UI Report 참조. dev 미커밋, 하네스 동기화 보류.

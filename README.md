@@ -1,6 +1,6 @@
 # PRism Frontend
 
-Vue 3 / TypeScript / Vite / Vue Router 개발 기반입니다. GitHub 로그인·내 프로필·세션 복원·로그아웃 화면을 구현했습니다. PR 목록·분석 화면은 후속입니다. Node 24와 npm을 사용하고 package-lock.json을 공유합니다.
+Vue 3 / TypeScript / Vite / Vue Router 개발 기반입니다. GitHub 로그인·내 프로필·세션 복원·로그아웃 화면을 구현했습니다. 팀·저장소 연결, PR 목록·상세 화면을 제공합니다. PR 상세에서 정적 분석 요청·상태·취소·결과·이력·재분석을 제공합니다. Node 24와 npm을 사용하고 package-lock.json을 공유합니다.
 
 ## 실행
 
@@ -21,9 +21,9 @@ npm test
 npm audit
 ```
 
-build는 vue-tsc 타입 검사와 production bundle 생성을 포함합니다. 테스트는 readiness와 refresh single-flight·만료 재시도·logout 실패/경쟁을 검증합니다. 현재 8개 통과. 프록시는 Vite 개발 서버용이며 production Vercel rewrite와 도메인은 아직 구성하지 않았습니다. 서버 자격증명을 VITE_*에 넣지 않습니다.
+build는 vue-tsc 타입 검사와 production bundle 생성을 포함합니다. 테스트는 readiness와 refresh single-flight·만료 재시도·logout 실패/경쟁을 검증합니다. 현재 23개 통과(라우트 접근 제어·세션 만료 포함). 프록시는 Vite 개발 서버용이며 production Vercel rewrite와 도메인은 아직 구성하지 않았습니다. 서버 자격증명을 VITE_*에 넣지 않습니다.
 
-src/app은 앱 진입·라우터·현재 준비 화면, src/shared/api는 기술 공통 API 계약을 소유합니다. 실제 화면 기능은 구현할 때 src/features에 생성합니다. 현 단계는 제품 디자인 확정이 아니라 실행 골격입니다. 다음 작업은 실제 GitHub 로그인 수동 확인과 Workspace 흐름입니다.
+src/app은 로그인·인증 후 공통 레이아웃·라우터, src/features는 인증과 작업 공간 기능, src/shared는 공통 API와 UI를 소유합니다.
 
 ## 하네스와 다른 PC에서 재개
 
@@ -49,3 +49,38 @@ src/app은 앱 진입·라우터·현재 준비 화면, src/shared/api는 기술
 4. GitHub 동의 취소 → 취소 안내와 다시 로그인 확인.
 
 Access는 메모리, Refresh는 HttpOnly 쿠키입니다. single-flight는 한 탭 내에서 적용됩니다. 실제 로그인·새로고침 유지·로그아웃은 사용자 확인 완료입니다. [작업 리포트](reports/2026-09-25_github-login_report.md)에 자동 검증과 남은 항목을 구분해 기록했습니다.
+
+## 팀·저장소 연결 (2026-09-26)
+
+구현은 dev에서 진행한다. 팀/초대/권한·GitHub App 연결·PR 동기화 화면과 API를 추가했다. 실제 App 등록·실계정 연결 확인은 별도이며 최신 결과는 reports/_LATEST.md를 따른다. 로그인용 OAuth App과 저장소용 GitHub App은 서로 다른 설정이다.
+
+등록/실행 상세는 Prism-Backend의 docs/TEAM_REPOSITORIES.md를 따른다. 개발 UI는 localhost:5173, API proxy는 localhost:8000이다.
+
+## 페이지 구성과 화면 확인
+
+| 주소 | 역할 |
+|---|---|
+| `/login` | GitHub 로그인, 실패 안내 및 재시도 |
+| `/app` | 로그인 후 메인: 저장소·팀 현황과 기능 페이지 진입 |
+| `/app/repositories` | 저장소 연결·선택, PR 동기화·검색·상세·GitHub 활동 |
+| `/app/team` | 멤버·역할·초대 관리 |
+
+로그인 상태를 복원한 뒤 보호 페이지에 진입합니다. 비로그인 또는 세션 만료 시 로그인으로 돌아갑니다. 기존 `/` OAuth callback은 메인으로, 저장소 연결 callback은 저장소 페이지로 전달합니다. 기능 페이지의 `team` 쿼리는 팀 선택을 유지합니다. 새 팀/초대 수락은 탐색 메뉴에서 펼치고, 계정/로그아웃은 우측 상단에 있습니다. 개발 연결 확인은 하단에 있습니다.
+
+수동 확인: 로그인 → 메인 → 저장소와 PR → PR 선택/활동 조회 → 팀 설정 → 새로고침/뒤로 가기 → 로그아웃. 미로그인 상태에서 기능 주소 직접 접근 시 로그인 화면이어야 합니다. 초대 링크는 로그인 후 다시 열어 수락합니다. 검색은 가져온 PR에 한정됩니다. 역할 변경·연결 해제 등 데이터 변경은 테스트 대상 팀에서만 확인하세요.
+
+2026-09-26 UI 개편 후 OAuth 설정을 수정했고 사용자가 실제 재로그인 성공을 확인했습니다. 개인·조직 저장소와 PR·정적 분석·AI 리뷰 화면을 확인했습니다. 세부 구현·검증 범위는 [최신 Report](reports/_LATEST.md)를 따릅니다.
+
+배포 시 `/app/*`, `/login` 직접 접근을 `index.html`로 처리하는 SPA fallback이 필요합니다. Vite 개발 서버에서는 지원하며 운영 설정은 배포 주소 결정 후 구성합니다.
+
+## 정적 분석 확인
+
+저장소와 PR → 연결된 저장소 → PR 선택 → 현재 PR 분석. 완료 후 검사 범위, 파일별 평가 내역, 중요도·경로·줄·규칙을 확인합니다. 같은 커밋 재분석은 새 이력으로 남습니다. 서버 `ANALYSIS_RUNNER_ENABLED=true`와 0005 migration이 필요합니다. [구현·수동 검증 기록](reports/2026-09-26_static-analysis_report.md).
+
+## 디자인 기준
+
+[화면 설계·체크리스트](docs/DESIGN.md), [반응형·동작 검증](reports/2026-09-26_design-refinement_report.md). 로그인 → 홈 → 저장소·PR → 정적 분석 흐름을 제공하며 모바일에서는 PR 상세에 집중하고 목록으로 복귀할 수 있습니다.
+
+## 수동 AI 리뷰
+
+완료된 정적 분석에서 OWNER가 전송 안내를 확인하고 요청합니다. 결과·근거·검토 범위·토큰·이력을 표시합니다. 공개 배포 전 운영 검증과 리뷰 품질 보강은 남아 있으며 자동 댓글·자동 수정은 제공하지 않습니다.

@@ -7,3 +7,5 @@
 공통 실행 규칙은 원본 HARNESS에서 가져온 GENERAL_HARNESS 사본이다. PROJECT_HARNESS는 제품 문서와 작업 경로를 연결한다. 하네스 변경은 원본 커밋과 localChanges를 비교해 수동 반입하며 다른 제품 사본에서 복사하지 않는다. 제품 ADR은 아키텍처 저장소에서 새 영역 번호로 작성한 후 양쪽 참조 커밋을 갱신한다.
 
 아키텍처 필수 경계: 업무는 domain/feature 소유, shared는 기술 공통 기능, 원문 코드 실행·설치 금지, AI 기본 OFF, 인증·Workspace·GitHub 권한 분리. 현재 업무 기능은 미구현이며 README가 실제 구현 현황의 진입점이다.
+
+2026-09-26 게시 갱신: 아키텍처 main cac51a07516cd2e36b3bf4cc45c9a17fad050002를 푸시했고 architecture.json을 해당 SHA로 연결했다. 위의 초기 구현 설명/미게시 메모는 당시 이력이며, 현재 구현·검증은 reports/_LATEST.md를 따른다. 과거 DB snapshot은 작성 당시 기준 SHA를 보존한다.

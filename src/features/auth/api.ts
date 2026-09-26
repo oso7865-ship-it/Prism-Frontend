@@ -12,6 +12,10 @@ export class AuthError extends Error {
   }
 }
 
+export class ApiError extends Error {
+  constructor(public code: string, message: string) { super(message) }
+}
+
 export function createAuthClient(fetcher: typeof fetch = fetch) {
   // Access token is scoped to this page lifetime; never use local/session storage.
   let accessToken: string | null = null
@@ -77,7 +81,23 @@ export function createAuthClient(fetcher: typeof fetch = fetch) {
     return signingOut
   }
 
-  return { currentUser, refresh, logout }
+  async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+    if (!path.startsWith('/api/v1/') || path.includes('://')) throw new Error('잘못된 API 경로입니다.')
+    if (!accessToken && !await refresh()) throw new AuthError(401)
+    const send = () => fetcher(path, { ...init, credentials: 'same-origin', cache: 'no-store',
+      headers: { ...init.headers, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } })
+    let response = await send()
+    if (response.status === 401 && await refresh()) response = await send()
+    if (response.status === 401) { accessToken = null; throw new AuthError(401) }
+    if (!response.ok) {
+      const messages: Record<number, string> = { 403: '이 작업을 수행할 권한이 없습니다.', 404: '접근할 수 없는 팀 또는 리소스입니다.', 409: '이미 처리되었거나 현재 상태와 충돌합니다. 새로고침 후 확인하세요.', 422: '입력값을 확인해 주세요.', 503: 'GitHub App 설정 또는 서버 연결을 확인해 주세요.' }
+      const body: unknown = await response.json().catch(() => null)
+      const code = body && typeof body === 'object' && 'error' in body && body.error && typeof body.error === 'object' && 'code' in body.error && typeof body.error.code === 'string' ? body.error.code : ''
+      throw new ApiError(code, messages[response.status] || '요청에 실패했습니다. 다시 시도해 주세요.')
+    }
+    return response.status === 204 ? undefined as T : await response.json() as T
+  }
+  return { currentUser, refresh, logout, request }
 }
 
 export const authClient = createAuthClient()
