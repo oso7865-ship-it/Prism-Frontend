@@ -84,3 +84,7 @@ Access는 메모리, Refresh는 HttpOnly 쿠키입니다. single-flight는 한 �
 ## 수동 AI 리뷰
 
 완료된 정적 분석에서 OWNER가 전송 안내를 확인하고 요청합니다. 결과·근거·검토 범위·토큰·이력을 표시합니다. 공개 배포 전 운영 검증과 리뷰 품질 보강은 남아 있으며 자동 댓글·자동 수정은 제공하지 않습니다.
+
+## 배포 직전 준비
+
+[배포 설정·운영 절차](deployment/README.md)를 확인하세요. production HTTPS·Secure cookie·프록시 설정과 Docker 이미지를 준비했으며 실제 공개 배포는 수행하지 않았습니다. 검증 결과와 남은 사용자 결정은 [최신 Report](reports/_LATEST.md)를 따릅니다.

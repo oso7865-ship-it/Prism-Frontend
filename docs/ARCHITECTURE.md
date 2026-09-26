@@ -9,3 +9,7 @@
 아키텍처 필수 경계: 업무는 domain/feature 소유, shared는 기술 공통 기능, 원문 코드 실행·설치 금지, AI 기본 OFF, 인증·Workspace·GitHub 권한 분리. 현재 업무 기능은 미구현이며 README가 실제 구현 현황의 진입점이다.
 
 2026-09-26 게시 갱신: 아키텍처 main cac51a07516cd2e36b3bf4cc45c9a17fad050002를 푸시했고 architecture.json을 해당 SHA로 연결했다. 위의 초기 구현 설명/미게시 메모는 당시 이력이며, 현재 구현·검증은 reports/_LATEST.md를 따른다. 과거 DB snapshot은 작성 당시 기준 SHA를 보존한다.
+
+2026-09-27 개발 변경: 원본 main working-tree에 ADR-REVIEW-005 및 static-1.1.0 범위 문서를 추가했다. 아직 미커밋이므로 architecture.json은 마지막 게시 SHA를 유지한다. 새 계약의 설계와 검증은 이번 프로젝트 Report에 기록하며 다음 게시 때 원본을 먼저 게시하고 revision을 연결해야 한다.
+
+2026-09-27 배포 전 게시: 원본 main c9275e62bb0efba3e42910e3dbcfe3b77f21409b를 푸시했고 architecture.json을 연결했다. ADR-REVIEW-005·ADR-DEPLOY-002와29규칙 계약을 포함한다. 위 미게시 메모는 당시 이력이다.

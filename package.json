@@ -7,6 +7,7 @@
     "node": ">=24 <25"
   },
   "scripts": {
+    "configure:deployment": "node scripts/prepare-deployment.mjs",
     "dev": "vite --host 127.0.0.1",
     "typecheck": "vue-tsc --noEmit",
     "build": "npm run typecheck && vite build",
