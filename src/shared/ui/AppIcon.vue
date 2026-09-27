@@ -1,6 +1,7 @@
 <script setup lang="ts">
-withDefaults(defineProps<{ name: 'home' | 'repo' | 'team' | 'pr' | 'plus' | 'refresh' | 'arrow' | 'close' | 'check' | 'search' }>(), { name: 'repo' })
+withDefaults(defineProps<{ name: 'home' | 'repo' | 'team' | 'pr' | 'plus' | 'refresh' | 'arrow' | 'close' | 'check' | 'search' | 'chevron-down' }>(), { name: 'repo' })
 const paths = {
+  'chevron-down': 'm6 9 6 6 6-6',
   home: 'm3 10 9-7 9 7v10H3V10Zm6 10v-7h6v7',
   repo: 'M4 4h13v16H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm0 12h13M7 7h6M7 10h4',
   team: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-3.87M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',

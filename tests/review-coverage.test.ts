@@ -19,7 +19,7 @@ describe('AI review coverage', () => {
     expect(html).toContain('f1')
     expect(html).toContain(`/blob/${base.headSha}/src/a.py`)
     expect(html).toContain('제공 12줄')
-    expect(html).toContain('파일 변경 코드가 8KiB 초과')
+    expect(html).toContain('파일 변경 코드가 해당 리뷰의 크기 한도를 넘음')
     expect(html).toContain('파일 이름 비공개')
     expect(html).toContain('5개 파일은 가져오지 않아')
     expect(html).not.toContain('<script>')
@@ -27,7 +27,7 @@ describe('AI review coverage', () => {
   })
   it('distinguishes unknown total from a complete fetched list', async () => {
     const html = await renderToString(createSSRApp(AIReviewCoverage, {...base, coverage:{files:[],excluded:[],unfetched_files:null}}))
-    expect(html).toContain('전체 변경 파일 수를 확인하지 못했습니다.')
+    expect(html).toContain('전체 변경 파일 수를 확인하지 못했어요.')
     expect(html).toContain('가져온 변경 파일 중 제외한 파일이 없습니다.')
   })
 })

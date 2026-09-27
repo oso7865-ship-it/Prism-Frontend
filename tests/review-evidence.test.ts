@@ -7,14 +7,14 @@ const base = { githubUrl: 'https://github.com/owner/repo/pull/1', headSha: 'a'.r
 describe('review evidence', () => {
   it('keeps legacy output without fabricating new evidence', async () => {
     const html = await renderToString(createSSRApp(AIReviewEvidence, {...base, issue:{file_path:'a.ts'}}))
-    expect(html).not.toContain('발생 조건')
+    expect(html).not.toContain('문제가 생길 수 있는 상황')
     expect(html).not.toContain('근거 줄')
   })
   it('escapes untrusted explanations and links each line to the exact head', async () => {
     const html = await renderToString(createSSRApp(AIReviewEvidence, {...base, issue:{file_path:'src/a.ts', trigger:'<script>bad()</script>', consequence:'null 역참조', assumptions:['입력 경계 미확인'], evidence_lines:[2,5]}}))
     expect(html).not.toContain('<script>')
     expect(html).toContain('&lt;script&gt;')
-    expect(html).toContain('미확인 전제')
+    expect(html).toContain('아직 확인하지 못한 점')
     expect(html).toContain(`/blob/${base.headSha}/src/a.ts#L2`)
     expect(html).toContain(`/blob/${base.headSha}/src/a.ts#L5`)
     expect(html).toContain('실제 동작을 검증한 결과는 아닙니다.')
