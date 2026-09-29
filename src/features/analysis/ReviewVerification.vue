@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import ReviewCodeViewer from './ReviewCodeViewer.vue'
 export interface FileCheck { file_id: string; file_path: string; line: number; outcome: string; observation: string }
 export interface Verification { status: string; kept?: number; revised?: number; dropped?: number; added?: number; file_checks?: FileCheck[] }
-defineProps<{ verification?: Verification; empty: boolean; workspaceId: string; runId: string; headSha: string; githubUrl: string }>()
+const props = defineProps<{ verification?: Verification; empty: boolean; workspaceId: string; runId: string; headSha: string; githubUrl: string }>()
 const selected = ref<FileCheck | null>(null)
+watch(() => [props.workspaceId, props.runId], () => { selected.value = null })
 </script>
 
 <template>

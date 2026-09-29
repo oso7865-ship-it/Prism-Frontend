@@ -6,7 +6,8 @@ import { sessionUser } from '../auth/session'
 import { loginLocation } from '../auth/returnLocation'
 import { displayLabel } from '../../shared/presentation'
 import DisclosureSummary from '../../shared/ui/DisclosureSummary.vue'
-import { kindLabels, ruleLabels, type StandardDocument, type StandardRule, type StandardSection, type StandardKind } from './types'
+import { useDocumentSections } from './useDocumentSections'
+import { kindLabels, ruleLabels, type StandardDocument, type StandardSection, type StandardKind } from './types'
 
 const props = defineProps<{ workspaceId: string; repositoryId: string; owner: boolean }>()
 const emit = defineEmits<{ close: []; changed: [] }>()
@@ -14,7 +15,8 @@ const router = useRouter()
 const base = `/api/v1/workspaces/${props.workspaceId}/repositories/${props.repositoryId}/standards`
 const documents = ref<StandardDocument[]>([]), versions = ref<StandardDocument[]>([]), selected = ref<StandardDocument | null>(null)
 const editing = ref(false), busy = ref(false), loaded = ref(false), error = ref(''), message = ref('')
-const title = ref(''), kind = ref<StandardKind>('CONVENTION'), content = ref(''), include = ref('**'), exclude = ref(''), required = ref(false), rules = ref<StandardRule[]>([]), sections = ref<StandardSection[]>([])
+const title = ref(''), kind = ref<StandardKind>('CONVENTION'), include = ref('**'), exclude = ref(''), required = ref(false)
+const { content, sections, rules, bindingsValid, editContent } = useDocumentSections()
 const titleInput = ref<HTMLInputElement | null>(null)
 let disposed = false
 const size = computed(() => new TextEncoder().encode(content.value).length)
@@ -56,6 +58,9 @@ async function preview() {
   const data = await authClient.request<{ sections: StandardSection[] }>(`${base}/preview`, { method: 'POST', body: JSON.stringify({ ...body(), rules: [] }) })
   if (!disposed) { sections.value = data.sections; message.value = `${data.sections.length}개 섹션을 확인했어요. 규칙에 맞는 근거 섹션을 선택하세요.` }
 }
+function edit(value: string) {
+  if (editContent(value) && rules.value.length) message.value = '본문이 바뀌었어요. 섹션을 확인한 뒤 각 규칙의 근거를 다시 선택해 주세요. 규칙 값과 경로는 유지했어요.'
+}
 async function upload(event: Event) {
   const input = event.target as HTMLInputElement, file = input.files?.[0]
   input.value = ''
@@ -63,11 +68,12 @@ async function upload(event: Event) {
   if (!/\.(md|txt)$/i.test(file.name) || file.size > 65536) { error.value = '.md 또는 .txt 파일을 64KiB 이하로 선택해 주세요.'; return }
   const value = new TextDecoder('utf-8', { fatal: true }).decode(await file.arrayBuffer())
   if (disposed) return
-  content.value = value; sections.value = []; rules.value = []
+  edit(value)
   if (!title.value) title.value = file.name.replace(/\.(md|txt)$/i, '').slice(0, 120)
-  message.value = '파일을 읽었어요. 내용을 확인한 뒤 저장해 주세요.'
+  if (!rules.value.length) message.value = '파일을 읽었어요. 내용을 확인한 뒤 저장해 주세요.'
 }
 async function save() {
+  if (!bindingsValid.value) { error.value = '섹션을 확인하고 모든 규칙의 근거 섹션을 다시 선택해 주세요.'; return }
   const doc = await authClient.request<StandardDocument>(selected.value ? `${base}/${selected.value.id}` : base, { method: selected.value ? 'PUT' : 'POST', body: JSON.stringify(body()) })
   if (disposed) return
   await load(); await open(doc); message.value = `문서 ${doc.version}번째 버전을 저장했어요.`; emit('changed')
@@ -104,13 +110,13 @@ onUnmounted(() => { disposed = true; content.value = ''; sections.value = [] })
         <label>문서 이름<input ref="titleInput" v-model="title" maxlength="120" required :readonly="!owner" :disabled="busy" /></label>
         <label>문서 종류<select v-model="kind" :disabled="busy || !owner"><option value="CONVENTION">코드 컨벤션</option><option value="STRUCTURE">패키지 구조</option></select></label>
         <label v-if="owner">문서 파일 가져오기 <span class="helper">선택 · UTF-8 .md / .txt · 최대 64KiB</span><input type="file" accept=".md,.txt,text/plain,text/markdown" :disabled="busy" @change="event => action(() => upload(event))" /></label>
-        <label>문서 내용 <span class="helper">{{ (size / 1024).toFixed(1) }} / 64KiB · # 제목으로 섹션을 나눠 주세요</span><textarea v-model="content" rows="12" required :readonly="!owner" :disabled="busy" spellcheck="false" /></label>
+        <label>문서 내용 <span class="helper">{{ (size / 1024).toFixed(1) }} / 64KiB · # 제목으로 섹션을 나눠 주세요</span><textarea :value="content" @input="edit(($event.target as HTMLTextAreaElement).value)" rows="12" required :readonly="!owner" :disabled="busy" spellcheck="false" /></label>
         <div class="standard-fields"><label>적용할 경로<input v-model="include" required :readonly="!owner" :disabled="busy" placeholder="src/**, app/**" /></label><label>제외할 경로<input v-model="exclude" :readonly="!owner" :disabled="busy" placeholder="tests/**, **/*.test.ts" /></label></div><p class="helper">쉼표로 구분해요. **는 모든 경로예요. 예외 경로가 적용 경로보다 우선해요.</p>
         <label class="standard-checkbox"><input v-model="required" type="checkbox" :disabled="busy || !owner" /><span>적용 파일이 있으면 모든 섹션을 필수로 검토<span class="helper">문맥 한도를 넘으면 일부를 빼지 않고 축약을 요청해요.</span></span></label>
         <button class="secondary" type="button" :disabled="busy || !title.trim() || !content.trim() || size > 65536" @click="action(preview)">섹션 확인</button>
         <details v-if="sections.length"><DisclosureSummary>검색에 사용할 섹션 {{ sections.length }}개</DisclosureSummary><ol class="standard-sections"><li v-for="section in sections" :key="section.id"><strong>{{ section.id.slice(1) }}. {{ section.heading }}</strong><p>{{ section.text }}</p></li></ol></details>
         <fieldset :disabled="busy || !owner"><legend>자동으로 확인할 규칙 <span class="helper">선택 · 문서 내용과 일치하는 규칙만 추가하세요</span></legend><div v-for="(rule, index) in rules" :key="index" class="standard-rule"><label>확인할 내용<select v-model="rule.kind"><option v-for="(label, value) in ruleLabels" :key="value" :value="value">{{ label }}</option></select></label><label>규칙 값<input v-model="rule.value" required maxlength="160" :placeholder="rule.kind === 'NAME_SUFFIX' ? '예: Service.java' : rule.kind === 'PATH_PREFIX' ? '예: src/domain' : '예: app.infrastructure'" /></label><label>근거 섹션<select v-model="rule.section" required><option value="" disabled>섹션 확인 후 선택하세요</option><option v-for="section in sections" :key="section.id" :value="section.id">{{ section.id.slice(1) }}. {{ section.heading }}</option></select></label><label>규칙 적용 경로<input :value="rule.include.join(', ')" required @input="rule.include = patterns(($event.target as HTMLInputElement).value)" /></label><label>규칙 제외 경로<input :value="rule.exclude.join(', ')" @input="rule.exclude = patterns(($event.target as HTMLInputElement).value)" /></label><button type="button" class="secondary" @click="rules.splice(index, 1)">규칙 {{ index + 1 }} 삭제</button></div><button v-if="owner" type="button" class="secondary" :disabled="rules.length >= 20 || !sections.length" @click="addRule">규칙 추가</button><p class="helper">문서에서 추출한 섹션을 먼저 확인하세요. 파일 이름·폴더 위치는 경로로 확인하고, 금지 패키지는 제공된 변경 줄의 import 구문만 확인해요.</p></fieldset>
-        <div class="button-group"><button v-if="owner" :disabled="busy || size > 65536">{{ selected ? '새 버전 저장' : '문서 저장' }}</button><button type="button" class="secondary" :disabled="busy" @click="editing = false; content = ''; sections = []">편집 닫기</button></div>
+        <div class="button-group"><button v-if="owner" :disabled="busy || size > 65536 || !bindingsValid">{{ selected ? '새 버전 저장' : '문서 저장' }}</button><button type="button" class="secondary" :disabled="busy" @click="editing = false; content = ''; sections = []">편집 닫기</button></div>
       </form><div v-else-if="documents.length" class="empty-note">문서를 선택해 내용과 보관된 버전을 확인하세요.</div>
     </div>
   </section>
