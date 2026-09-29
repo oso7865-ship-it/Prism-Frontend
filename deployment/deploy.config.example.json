@@ -1,0 +1,7 @@
+{
+  "enabled": false,
+  "image_repository": "ghcr.io/oso7865-ship-it/prism-frontend",
+  "docker_config": "/root/.docker",
+  "site_root": "/srv/prism-frontend",
+  "state_dir": "/var/lib/prism-frontend-deploy"
+}

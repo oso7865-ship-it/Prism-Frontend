@@ -20,25 +20,18 @@ jobs:
       - run: node scripts/check-repository.mjs
       - run: node --test scripts/repository-tools.test.mjs
       - run: node --test scripts/check-production.test.mjs
+      - run: python3 -m unittest discover -s deployment/tests -v
 
-  deploy:
+  publish:
     needs: validate
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    environment:
-      name: production
-      url: https://prismquest.p-e.kr
-    concurrency:
-      group: frontend-production
-      cancel-in-progress: false
+    timeout-minutes: 15
     permissions:
       contents: read
-    env:
-      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
-      PRISM_API_ORIGIN: https://api-prismquest.p-e.kr
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.image }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -47,19 +40,68 @@ jobs:
         with:
           node-version: '24'
           cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - name: Package public static files without executing a container
+        run: docker build -f deployment/Dockerfile --build-arg REVISION="$GITHUB_SHA" -t prism-frontend-release:local dist/
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish immutable static artifact
+        id: image
+        env:
+          IMAGE_REPOSITORY: ghcr.io/oso7865-ship-it/prism-frontend
+        run: |
+          set -euo pipefail
+          docker tag prism-frontend-release:local "$IMAGE_REPOSITORY:$GITHUB_SHA"
+          docker push "$IMAGE_REPOSITORY:$GITHUB_SHA"
+          image=$(docker image inspect "$IMAGE_REPOSITORY:$GITHUB_SHA" --format '{{index .RepoDigests 0}}')
+          [[ "$image" =~ ^ghcr\.io/oso7865-ship-it/prism-frontend@sha256:[0-9a-f]{64}$ ]]
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+      - name: Verify anonymous download of the exact image
+        env:
+          PRISM_IMAGE: ${{ steps.image.outputs.image }}
+        run: python3 scripts/check_public_image.py --image "$PRISM_IMAGE"
+
+  deploy:
+    needs: publish
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: production
+      url: https://prismquest.p-e.kr
+    concurrency:
+      group: frontend-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Require deployment settings and current main
         env:
+          AWS_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test -n "$VERCEL_ORG_ID" && test -n "$VERCEL_PROJECT_ID" && test -n "$VERCEL_TOKEN"
+          test -n "$AWS_ROLE_ARN" && test -n "$EC2_INSTANCE_ID"
           test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$GITHUB_SHA"
-      - run: npm ci
-      - run: npm run configure:deployment
-      - run: npm install --global vercel@61.0.0
-      - run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
-      - run: vercel build --prod --token="$VERCEL_TOKEN"
-      - name: Deploy production build
-        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
-      - name: Check public page and API proxy
-        run: node scripts/check-production.mjs
+      - uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-northeast-2
+          role-session-name: prism-front-${{ github.run_id }}
+          allowed-account-ids: '152025328159'
+      - name: Deploy and wait for EC2 verification
+        env:
+          PRISM_IMAGE: ${{ needs.publish.outputs.image }}
+          PRISM_EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+          PRISM_SSM_DOCUMENT: PrismDeployFrontend
+        run: python3 scripts/dispatch_ec2.py
