@@ -7,7 +7,7 @@ import { sessionUser } from '../auth/session'
 import { loginLocation } from '../auth/returnLocation'
 import ReviewIssueCard from './ReviewIssueCard.vue'
 import ReviewVerification, { type Verification } from './ReviewVerification.vue'
-import { classifyReview, compareReview, type ReviewFeedback, type ReviewIssue } from './reviewModel'
+import { classifyReview, compareReviewResults, type ReviewFeedback, type ReviewIssue } from './reviewModel'
 
 import AppIcon from '../../shared/ui/AppIcon.vue'
 import SectionHeading from '../../shared/ui/SectionHeading.vue'
@@ -21,7 +21,7 @@ const feedback = ref<Record<string,ReviewFeedback>>({})
 const grouped = computed(() => current.value?.result ? classifyReview(current.value.result) : {findings:[],questions:[]})
 const previous = computed(() => { const index = runs.value.findIndex(r=>r.id===current.value?.id); return runs.value.slice(index+1).find(r=>r.status==='COMPLETED' && r.result) })
 const legacy = computed(() => current.value?.result?.issues.some(i=>!i.basis) || false)
-const comparison = computed(() => !legacy.value && current.value?.result && previous.value?.result && !previous.value.result.issues.some(i=>!i.basis) ? compareReview(grouped.value.findings, classifyReview(previous.value.result).findings) : null)
+const comparison = computed(() => !legacy.value && current.value?.result && previous.value?.result && !previous.value.result.issues.some(i=>!i.basis) ? compareReviewResults(current.value.result, previous.value.result) : null)
 async function loadFeedback() { if (!current.value?.result) { feedback.value = {}; return }; const id=current.value.id; const data=await authClient.request<{items:ReviewFeedback[]}>(`${base}/reviews/${id}/feedback`); if (!disposed && current.value?.id===id) feedback.value=Object.fromEntries(data.items.map(f=>[f.key,f])) }
 function savedFeedback(value:ReviewFeedback) { feedback.value={...feedback.value,[value.key]:value} }
 const enabled = ref(false), loaded = ref(false), busy = ref(false), consent = ref(false), error = ref(''), dailyLimit = ref(30)

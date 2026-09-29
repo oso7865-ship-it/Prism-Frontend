@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createSSRApp } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 import ReviewIssueCard from '../src/features/analysis/ReviewIssueCard.vue'
-import { classifyReview, compareReview, type ReviewIssue } from '../src/features/analysis/reviewModel'
+import { classifyReview, compareReview, compareReviewResults, type ReviewIssue } from '../src/features/analysis/reviewModel'
 import { clearReturn, pendingReturn, rememberReturn, safeReturn } from '../src/features/auth/returnLocation'
 
 const issue: ReviewIssue = { key:'key', file_path:'src/a.ts', line:2, title:'null 경계', severity:'WARNING', basis:'SUPPORTED', evidence:'분기 역참조', suggestion:'null 반환', consequence:'예외 발생' }
@@ -14,6 +14,17 @@ describe('review workflow', () => {
   })
   it('compares identities without calling a missing finding resolved', () => {
     expect(compareReview([issue,{...issue,key:'new'}],[issue,{...issue,key:'old'}])).toEqual({added:1,repeated:1,notSeen:1})
+  })
+  it('includes new, repeated and no-longer-seen questions in round comparison', () => {
+    const question = {...issue, basis:'NEEDS_CONTEXT'}
+    expect(compareReviewResults(
+      {issues:[],questions:[{...question,key:'new'},question]},
+      {issues:[],questions:[question,{...question,key:'old'}]},
+    )).toEqual({added:1,repeated:1,notSeen:1})
+    expect(compareReviewResults({issues:[],questions:[question]},{issues:[]}))
+      .toEqual({added:1,repeated:0,notSeen:0})
+    expect(compareReviewResults({issues:[],questions:[question]},{issues:[question]}))
+      .toEqual({added:0,repeated:1,notSeen:0})
   })
   it('renders escaped text, expandable evidence and persistent decision controls', async () => {
     const html = await renderToString(createSSRApp(ReviewIssueCard,{issue:{...issue,title:'<script>bad()</script>'},question:false,workspaceId:'w',runId:'r',githubUrl:'https://github.com/a/b/pull/1',headSha:'a'.repeat(40),feedback:{key:'key',state:'INTENDED',note:'문서 단위 락'}}))

@@ -13,3 +13,7 @@ export function compareReview(current: ReviewIssue[], previous: ReviewIssue[]) {
   const before = new Set(previous.map(identity)), after = new Set(current.map(identity))
   return { added: current.filter(i => !before.has(identity(i))).length, repeated: current.filter(i => before.has(identity(i))).length, notSeen: previous.filter(i => !after.has(identity(i))).length }
 }
+export function compareReviewResults(current: { issues: ReviewIssue[]; questions?: ReviewIssue[] }, previous: { issues: ReviewIssue[]; questions?: ReviewIssue[] }) {
+  const now = classifyReview(current), before = classifyReview(previous)
+  return compareReview([...now.findings, ...now.questions], [...before.findings, ...before.questions])
+}
