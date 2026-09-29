@@ -1,5 +1,8 @@
 name: frontend-ci
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
@@ -16,3 +19,47 @@ jobs:
       - run: npm test
       - run: node scripts/check-repository.mjs
       - run: node --test scripts/repository-tools.test.mjs
+      - run: node --test scripts/check-production.test.mjs
+
+  deploy:
+    needs: validate
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://prismquest.p-e.kr
+    concurrency:
+      group: frontend-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    env:
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+      PRISM_API_ORIGIN: https://api-prismquest.p-e.kr
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Require deployment settings and current main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_ORG_ID" && test -n "$VERCEL_PROJECT_ID" && test -n "$VERCEL_TOKEN"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$GITHUB_SHA"
+      - run: npm ci
+      - run: npm run configure:deployment
+      - run: npm install --global vercel@61.0.0
+      - run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+      - run: vercel build --prod --token="$VERCEL_TOKEN"
+      - name: Deploy production build
+        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+      - name: Check public page and API proxy
+        run: node scripts/check-production.mjs
