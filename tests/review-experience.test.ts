@@ -18,7 +18,7 @@ describe('review workflow', () => {
   it('renders escaped text, expandable evidence and persistent decision controls', async () => {
     const html = await renderToString(createSSRApp(ReviewIssueCard,{issue:{...issue,title:'<script>bad()</script>'},question:false,workspaceId:'w',runId:'r',githubUrl:'https://github.com/a/b/pull/1',headSha:'a'.repeat(40),feedback:{key:'key',state:'INTENDED',note:'문서 단위 락'}}))
     expect(html).toContain('&lt;script&gt;'); expect(html).not.toContain('<script>')
-    expect(html).toContain('의도한 동작'); expect(html).toContain('이유와 개선 방법 보기'); expect(html).toContain('주변 코드 보기')
+    expect(html).toContain('의도한 동작'); expect(html).toContain('이유와 개선 방법 보기'); expect(html).toContain('사이트에서 코드 보기')
   })
 })
 describe('login destination', () => {

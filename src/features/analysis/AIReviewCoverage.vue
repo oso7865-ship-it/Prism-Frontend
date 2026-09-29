@@ -2,6 +2,8 @@
 import DisclosureSummary from '../../shared/ui/DisclosureSummary.vue'
 import { displayLabel } from '../../shared/presentation'
 import { sourceLink } from './sourceLink'
+import { nextTick, ref, useId, watch } from 'vue'
+import ReviewCodeViewer from './ReviewCodeViewer.vue'
 
 export interface ReviewCoverage {
   files: { file_id: string; file_path: string; provided_lines: number; role?: string }[]
@@ -10,7 +12,15 @@ export interface ReviewCoverage {
   context_notes?: { file_id: string; reason: string }[]
   prior_feedback_count?: number
 }
-defineProps<{ coverage?: ReviewCoverage; githubUrl: string; headSha: string }>()
+const props = defineProps<{ coverage?: ReviewCoverage; githubUrl: string; headSha: string; workspaceId?: string; runId?: string; expanded?: boolean }>()
+const selected = ref<ReviewCoverage['files'][number] | null>(null), viewerId = useId(), viewer = ref<HTMLElement | null>(null)
+let opener: HTMLButtonElement | null = null
+async function openFile(file: ReviewCoverage['files'][number], event: MouseEvent) {
+  selected.value = file; opener = event.currentTarget as HTMLButtonElement
+  await nextTick(); viewer.value?.focus({preventScroll:true}); viewer.value?.scrollIntoView({block:'start'})
+}
+async function closeFile() { selected.value = null; await nextTick(); opener?.focus() }
+watch(() => props.runId, () => { selected.value = null; opener = null })
 const reasons: Record<string, string> = {
   FUNCTION_PARTIAL: '함수 일부만 제공되어 전체 분기 확인에 한계가 있음',
   QUERY_LIMIT: '변경된 함수가 많아 일부 함수의 관련 코드 검색을 생략',
@@ -36,17 +46,19 @@ const reasons: Record<string, string> = {
 </script>
 
 <template>
-  <details v-if="coverage" class="ai-coverage">
+  <details v-if="coverage" class="ai-coverage" :open="expanded">
     <DisclosureSummary>살펴본 파일과 제외한 이유</DisclosureSummary>
     <p class="helper">요약의 f1, f2는 아래 파일의 AI 참조 번호입니다. 줄 수는 실제 제공한 변경·주변 코드이며 전체 파일을 검토했다는 뜻은 아닙니다.</p>
     <h5>검토한 파일 · {{ coverage.files.length }}개</h5>
     <ul class="ai-coverage-list">
       <li v-for="file in coverage.files" :key="file.file_id">
         <span class="badge badge--accent">{{ displayLabel({changed:'변경 파일', related:'관련 파일'}, file.role ?? 'changed', '파일 유형 미확인') }} · {{ /^([fc])\d+$/.test(file.file_id) ? file.file_id : '참조 번호 미확인' }}</span>
-        <a :href="sourceLink(githubUrl, headSha, file.file_path, null, null)" target="_blank" rel="noopener noreferrer">{{ file.file_path }} ↗</a>
+        <button v-if="workspaceId && runId" class="secondary coverage-code-button" :aria-expanded="selected?.file_id === file.file_id" :aria-controls="viewerId" @click="openFile(file, $event)"><span>{{ file.file_path }}</span><span>코드 보기</span></button>
+        <a v-else :href="sourceLink(githubUrl, headSha, file.file_path, null, null)" target="_blank" rel="noopener noreferrer">{{ file.file_path }} ↗</a>
         <span class="helper">{{ file.role === 'related' ? '관련 코드 · ' : '' }}제공 {{ file.provided_lines }}줄</span>
       </li>
     </ul>
+    <div v-if="selected && workspaceId && runId" :id="viewerId" ref="viewer" tabindex="-1"><ReviewCodeViewer :key="runId+selected.file_id" :endpoint="`/api/v1/workspaces/${workspaceId}/reviews/${runId}/source-files/${encodeURIComponent(selected.file_id)}`" :file-path="selected.file_path" :head-sha="headSha" :github-url="githubUrl" @close="closeFile" /></div>
     <p v-if="coverage.context_notes?.length" class="helper">가져오지 못한 코드와 이유: {{ coverage.context_notes.map(n => [coverage?.files.find(f => f.file_id === n.file_id)?.file_path, displayLabel(reasons, n.reason, '추가 코드를 가져오지 못함 · 이유 확인 필요')].filter(Boolean).join(' · ')).join(' / ') }}</p>
     <p v-if="coverage.prior_feedback_count !== undefined" class="helper">이전 검토 메모 {{ coverage.prior_feedback_count }}개 참고 · 코드가 사용되는 모든 경로를 확인한 것은 아니에요.</p>
     <h5>제외한 파일 · {{ coverage.excluded.length }}개</h5>
@@ -62,3 +74,10 @@ const reasons: Record<string, string> = {
   </details>
   <p v-else class="helper ai-coverage-legacy">이 리뷰는 파일별 검토 범위 기록이 추가되기 전에 생성됐습니다. 당시의 파일 목록과 제외 사유는 확인할 수 없습니다.</p>
 </template>
+
+<style scoped>
+[tabindex="-1"] { scroll-margin-top: 140px; }
+.coverage-code-button { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex: 1 1 280px; min-width: 0; text-align: left; }
+.coverage-code-button span:first-child { overflow-wrap: anywhere; min-width: 0; }
+.coverage-code-button span:last-child { flex-shrink: 0; }
+</style>
