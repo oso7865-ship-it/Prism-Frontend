@@ -10,6 +10,7 @@ import AppIcon from '../../shared/ui/AppIcon.vue'
 import DisclosureSummary from '../../shared/ui/DisclosureSummary.vue'
 import StatusBadge from '../../shared/ui/StatusBadge.vue'
 import PullRequestDetail from './PullRequestDetail.vue'
+import StandardsPanel from '../standards/StandardsPanel.vue'
 import { findGitHubUser, type GitHubPerson } from './githubUser'
 import type { PR, Review } from './types'
 type Team = { id: string; name: string; role: string }
@@ -21,7 +22,20 @@ type Page<T> = { items: T[]; next_cursor: string | null }
 const route = useRoute(), router = useRouter()
 const page = computed(() => route.meta.page as 'home' | 'repositories' | 'team')
 const query = ref(''), stateFilter = ref('ALL'), loadedKind = ref('')
-const toolsOpen = ref(false), repoToolsOpen = ref(false)
+const toolsOpen = ref(false), repoToolsOpen = ref(false), standardsOpen = ref(false)
+const standardsArea = ref<HTMLElement | null>(null)
+let standardsTrigger: HTMLElement | null = null
+async function revealStandards() {
+  standardsTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  standardsOpen.value = true
+  await nextTick()
+  standardsArea.value?.focus()
+}
+async function closeStandards() {
+  standardsOpen.value = false
+  await nextTick()
+  standardsTrigger?.focus()
+}
 const invitePerson = ref<GitHubPerson | null>(null)
 const failed = ref(false), initialized = ref(false)
 const createDisclosure = ref<HTMLDetailsElement | null>(null), joinDisclosure = ref<HTMLDetailsElement | null>(null)
@@ -178,6 +192,10 @@ onMounted(() => { const pending = new URLSearchParams(location.hash.slice(1)).ge
           <ul v-else class="repository-list"><li v-for="r in repos" :key="r.id" :class="{ 'is-selected': activeRepo?.id === r.id }"><button class="repository-select" :disabled="busy || r.status !== 'ACTIVE'" :aria-pressed="activeRepo?.id === r.id" @click="action(() => openRepo(r))"><span class="repo-icon"><AppIcon name="repo" /></span><span class="repository-name"><strong>{{ r.repository_name }}</strong><span>{{ r.owner_login }}</span></span><StatusBadge :value="r.status" /></button><details v-if="canManage && r.status !== 'DISCONNECTED'" class="repository-manage"><DisclosureSummary :aria-label="`${r.repository_name} 연결 관리`">관리</DisclosureSummary><div><p class="helper">연결을 해제하면 이 저장소의 새 변경 요청을 가져오지 않아요.</p><button class="danger-button" :disabled="busy" @click="action(() => disconnect(r))">연결 해제</button></div></details></li></ul>
         </section>
 
+        <div v-if="activeRepo" class="standard-management-entry"><button class="secondary" :aria-expanded="standardsOpen" aria-controls="team-standards-area" @click="standardsOpen ? closeStandards() : revealStandards()">{{ standardsOpen ? '팀 문서 닫기' : '팀 문서 관리' }}</button><span class="helper">{{ activeRepo.repository_name }} · 코드 컨벤션 · 패키지 구조</span></div>
+        <div v-if="standardsOpen && activeRepo" id="team-standards-area" ref="standardsArea" class="surface standards-area" tabindex="-1">
+          <StandardsPanel :key="selected + activeRepo.id" :workspace-id="selected" :repository-id="activeRepo.id" :owner="team.role === 'OWNER'" @close="closeStandards" />
+        </div>
         <div v-if="activeRepo" class="pr-workspace" :class="{ 'has-detail': detail }">
           <section class="surface pr-section" aria-labelledby="pr-list-title">
             <div class="section-heading"><div><p class="eyebrow">{{ activeRepo.repository_name }}</p><h2 id="pr-list-title">변경 요청 <span class="count">{{ prs.length }}</span></h2></div><button :disabled="busy || !canManage || ['PENDING', 'RUNNING'].includes(sync?.status || '')" @click="action(() => requestSync())"><AppIcon name="refresh" />최신 요청 가져오기</button></div>
@@ -188,7 +206,7 @@ onMounted(() => { const pending = new URLSearchParams(location.hash.slice(1)).ge
             <div v-else-if="!busy" class="empty-state compact"><AppIcon name="pr" /><h3>{{ prs.length ? '검색 결과가 없어요' : '아직 가져온 변경 요청이 없어요' }}</h3><p>{{ prs.length ? '다른 검색어나 상태로 확인해 보세요.' : '최신 요청 가져오기를 누르면 GitHub의 변경 요청이 여기에 표시돼요.' }}</p><button v-if="prs.length" class="secondary" @click="query = ''; stateFilter = 'ALL'">검색 조건 지우기</button></div>
             <div class="list-footer"><span>가져온 요청 {{ visiblePRs.length }}개 표시</span><button v-if="sync?.next_cursor" class="text-button" :disabled="busy" @click="action(() => requestSync(Number(sync?.next_cursor)))">이전 요청 더 보기</button></div>
           </section>
-          <PullRequestDetail v-if="detail" :workspace-id="selected" :user-id="userId" :can-manage="canManage" :owner="team.role === 'OWNER'" :pr="detail" :reviews="reviews" :busy="busy" :loaded-kind="loadedKind" :github-url="prUrl" @close="closeDetail" @reviews="kind => action(() => loadReviews(kind))" />
+          <PullRequestDetail v-if="detail" :workspace-id="selected" :user-id="userId" :can-manage="canManage" :owner="team.role === 'OWNER'" :repository-id="activeRepo?.id" @standards="revealStandards" :pr="detail" :reviews="reviews" :busy="busy" :loaded-kind="loadedKind" :github-url="prUrl" @close="closeDetail" @reviews="kind => action(() => loadReviews(kind))" />
         </div>
         <p class="workspace-note">변경 요청을 열면 코드 점검 결과, AI 리뷰, GitHub의 대화를 확인할 수 있어요.</p>
       </template>

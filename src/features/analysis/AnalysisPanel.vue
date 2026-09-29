@@ -11,11 +11,14 @@ import AppIcon from '../../shared/ui/AppIcon.vue'
 import SectionHeading from '../../shared/ui/SectionHeading.vue'
 import DisclosureSummary from '../../shared/ui/DisclosureSummary.vue'
 import AIReviewPanel from './AIReviewPanel.vue'
+import SecuritySignals from './SecuritySignals.vue'
 import { sourceLink } from './sourceLink'
 import { analysisErrors, coverageLabels, severityRank, type AnalysisRun, type Finding, type FileResult } from './types'
 
-const props = defineProps<{ workspaceId: string; prId: string; headSha: string | null; userId: string; canManage: boolean; owner: boolean; githubUrl: string; mode?: 'overview' | 'static' | 'ai' }>()
-const emit = defineEmits<{ navigate: [tab: 'static' | 'ai'] }>()
+const props = defineProps<{ workspaceId: string; prId: string; headSha: string | null; userId: string; canManage: boolean; owner: boolean; githubUrl: string; repositoryId?: string; mode?: 'overview' | 'static' | 'ai' | 'security' | 'standards' }>()
+const aiMode = computed(() => ['ai', 'security', 'standards'].includes(props.mode || ''))
+const purpose = computed(() => props.mode === 'security' ? 'SECURITY' : props.mode === 'standards' ? 'STANDARDS' : 'CODE')
+const emit = defineEmits<{ navigate: [tab: 'static' | 'ai']; standards: [] }>()
 const router = useRouter(), route = useRoute()
 const runs = ref<AnalysisRun[]>([]), current = ref<AnalysisRun | null>(null)
 const findings = ref<Finding[]>([]), files = ref<FileResult[]>([]), cursor = ref<string | null>(null)
@@ -97,7 +100,7 @@ onUnmounted(()=>{disposed=true;clearTimeout(timer)})
 
 <template>
   <section class="analysis-panel" :aria-label="mode === 'overview' ? '점검·리뷰 요약' : mode === 'ai' ? 'AI 리뷰 기록' : '코드 점검'">
-    <div v-show="mode === 'static' || (!current && mode === 'ai')"><SectionHeading title="코드 점검" title-id="analysis-heading" icon="search" description="정해진 규칙으로 자동 확인"><span class="analysis-version">점검 기준 {{ rules.length }}개</span></SectionHeading>
+    <div v-show="mode === 'static' || (!current && aiMode)"><SectionHeading title="코드 점검" title-id="analysis-heading" icon="search" description="정해진 규칙으로 자동 확인"><span class="analysis-version">점검 기준 {{ rules.length }}개</span></SectionHeading>
     <p class="helper analysis-intro">코드를 실행하지 않고 정해진 규칙으로 살펴봐요. 확인이 필요한 부분과 코드 위치를 알려드려요.</p>
     <div class="analysis-actions">
       <button :disabled="busy || polling || !!active || !loaded || !enabled || !headSha" @click="action(()=>start(!!current && current.head_sha === headSha))"><AppIcon :name="active ? 'refresh' : 'pr'" :class="{ 'is-spinning': active }" />{{ busy ? '처리 중…' : active ? '코드 점검 중' : current && current.head_sha === headSha ? '같은 코드 다시 점검' : '코드 점검 시작' }}</button>
@@ -135,9 +138,11 @@ onUnmounted(()=>{disposed=true;clearTimeout(timer)})
     </div>
     </div>
     <div v-if="mode === 'overview'" class="pr-overview"><h4>점검·리뷰 요약</h4><p v-if="!loaded" class="helper">이전 점검 기록을 불러오고 있어요.</p><template v-else-if="current"><dl class="overview-metrics"><div><dt>코드 점검</dt><dd>{{ analysisStatus(current.status) }}</dd></div><div><dt>확인할 항목</dt><dd>{{ current.finding_count }}건</dd></div><div><dt>점검 범위</dt><dd>{{ current.included_files }} / {{ current.total_files }}파일</dd></div></dl><p v-if="current.head_sha !== headSha" class="notice">현재 변경 요청과 다른 코드 버전의 점검 결과예요.</p><p class="helper">코드 점검은 정해진 규칙에 따라 확인해요. AI 리뷰에서는 개선 제안과 추가로 확인할 질문을 볼 수 있어요.</p></template><p v-else class="empty-note">아직 점검하지 않은 변경 요청이에요. 코드 점검부터 시작해 보세요.</p><p v-if="error" role="alert" class="notice notice--error">{{ error }}</p><div class="button-group"><button class="secondary" @click="emit('navigate','static')">코드 점검 보기</button><button :disabled="current?.status !== 'COMPLETED'" @click="emit('navigate','ai')">AI 리뷰 보기</button></div></div>
-    <label v-if="mode === 'ai' && runs.length" class="analysis-history">AI가 참고할 점검 기록<select :value="current?.id" :disabled="busy || polling" @change="action(()=>select(runs.find(r=>r.id===($event.target as HTMLSelectElement).value)!,true))"><option v-for="run in runs" :key="run.id" :value="run.id">{{ displayTime(run.created_at) }} · {{ analysisStatus(run.status) }} · {{ run.head_sha.slice(0,7) }}</option></select></label>
-    <p v-if="mode === 'ai' && current && current.status !== 'COMPLETED'" class="notice">완료된 점검 기록을 선택해 주세요. 기록이 없으면 코드 점검을 먼저 진행하세요.</p>
-    <AIReviewPanel v-if="current?.status === 'COMPLETED' && mode === 'ai'" :key="current.id" :workspace-id="workspaceId" :analysis-id="current.id" :github-url="githubUrl" :owner="owner" />
+    <label v-if="aiMode && runs.length" class="analysis-history">AI가 참고할 점검 기록<select :value="current?.id" :disabled="busy || polling" @change="action(()=>select(runs.find(r=>r.id===($event.target as HTMLSelectElement).value)!,true))"><option v-for="run in runs" :key="run.id" :value="run.id">{{ displayTime(run.created_at) }} · {{ analysisStatus(run.status) }} · {{ run.head_sha.slice(0,7) }}</option></select></label>
+    <p v-if="aiMode && current && current.status !== 'COMPLETED'" class="notice">완료된 점검 기록을 선택해 주세요. 기록이 없으면 코드 점검을 먼저 진행하세요.</p>
+    <div v-if="mode === 'standards'" class="standard-management-entry"><p class="helper">우리 팀의 문서에서 적용할 규칙을 찾아 검토해요. 팀 문서 관리에서 검토할 문서와 적용 범위를 확인하세요.</p><button class="secondary" @click="emit('standards')">팀 문서 관리</button></div>
+    <SecuritySignals v-if="current?.status === 'COMPLETED' && mode === 'security'" :key="'security-' + current.id" :workspace-id="workspaceId" :analysis-id="current.id" :head-sha="current.head_sha" :github-url="githubUrl" />
+    <AIReviewPanel v-if="current?.status === 'COMPLETED' && aiMode" :key="current.id + purpose" :workspace-id="workspaceId" :repository-id="repositoryId" :analysis-id="current.id" :purpose="purpose" :github-url="githubUrl" :owner="owner" />
     <details v-if="mode === 'static'" class="analysis-rules"><DisclosureSummary>점검 가능한 언어와 기준 {{ rules.length }}개</DisclosureSummary><p class="helper">Java · Python · JavaScript · TypeScript 코드를 점검해요. .vue 파일 등 지원하지 않는 코드에서는 비밀정보가 의심되는 글자 패턴만 확인해요. 한 번에 최대 100개 파일, 파일당 200KiB, 전체 2MiB, 120초까지 점검해요. 모든 보안 문제나 자료형 오류를 확인하는 검사는 아니에요.</p><p class="helper">{{ rules.join(' · ') }}</p></details>
   </section>
 </template>

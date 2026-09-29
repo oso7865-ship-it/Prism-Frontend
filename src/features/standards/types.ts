@@ -1,0 +1,9 @@
+export type StandardKind = 'CONVENTION' | 'STRUCTURE'
+export type StandardRule = { kind: 'NAME_SUFFIX' | 'PATH_PREFIX' | 'FORBIDDEN_IMPORT'; value: string; section: string; include: string[]; exclude: string[] }
+export type StandardSection = { id: string; heading: string; text: string }
+export type StandardDocument = { id: string; version_id: string; version: number; current_version: number; title: string; kind: StandardKind; active: boolean; required: boolean; include: string[]; exclude: string[]; rules: StandardRule[]; content?: string; sections?: StandardSection[]; section_count: number }
+export type Citation = { document_id: string; version: number; title: string; section: string; heading: string }
+export type StandardCheck = { rule: string; kind: string; value: string; file_id: string; file_path: string; line: number | null; status: string; citation: Citation }
+export type StandardsResult = { standards?: { documents: Citation[]; candidate_count: number; omitted_sections: number; method: string; scope_fallback?: boolean }; standard_checks?: StandardCheck[]; standard_sources?: Citation[] }
+export const ruleLabels: Record<string, string> = { NAME_SUFFIX: '파일 이름 끝부분', PATH_PREFIX: '파일이 있어야 할 폴더', FORBIDDEN_IMPORT: '가져오면 안 되는 패키지' }
+export const kindLabels: Record<string, string> = { CONVENTION: '코드 컨벤션', STRUCTURE: '패키지 구조' }

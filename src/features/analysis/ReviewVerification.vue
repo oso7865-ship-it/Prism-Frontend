@@ -2,14 +2,15 @@
 import { ref } from 'vue'
 import ReviewCodeViewer from './ReviewCodeViewer.vue'
 export interface FileCheck { file_id: string; file_path: string; line: number; outcome: string; observation: string }
-export interface Verification { status: string; kept?: number; revised?: number; dropped?: number; file_checks?: FileCheck[] }
+export interface Verification { status: string; kept?: number; revised?: number; dropped?: number; added?: number; file_checks?: FileCheck[] }
 defineProps<{ verification?: Verification; empty: boolean; workspaceId: string; runId: string; headSha: string; githubUrl: string }>()
 const selected = ref<FileCheck | null>(null)
 </script>
 
 <template>
-  <section v-if="verification?.status === 'EMPTY_RECHECKED'" class="review-recheck">
-    <h4>빈 답변을 한 번 더 검토했어요</h4>
+  <section v-if="verification?.file_checks?.length" class="review-recheck">
+    <h4>{{ verification.status === 'OUTPUT_RECOVERED' ? '처음 답변을 읽지 못해 코드를 다시 검토했어요' : verification.status === 'CHECKED' ? '기존 제안과 놓친 부분을 함께 검토했어요' : '빈 답변을 한 번 더 검토했어요' }}</h4>
+    <p v-if="verification.status === 'CHECKED'" class="helper">유지 {{ verification.kept ?? 0 }}건 · 수정 {{ verification.revised ?? 0 }}건 · 제외 {{ verification.dropped ?? 0 }}건 · 새로 발견 {{ verification.added ?? 0 }}건</p>
     <p class="helper">AI가 변경 파일별로 다시 살펴본 결과예요. 전체 코드의 안전성을 보장하거나 실행으로 확인한 결과는 아니에요.</p>
     <ul class="recheck-list"><li v-for="check in verification.file_checks" :key="check.file_id"><div><strong>{{ check.file_path.split('/').pop() }}</strong><span class="badge">{{ check.outcome === 'FINDING' ? '검토 항목 발견' : check.outcome === 'LIMITED' ? '문맥 부족' : '제공 범위에서 제안 없음' }}</span></div><p>{{ check.observation }}</p><button class="secondary" @click="selected=check">{{ check.line }}줄 코드 보기</button></li></ul>
     <ReviewCodeViewer v-if="selected" :key="runId+selected.file_id" :endpoint="`/api/v1/workspaces/${workspaceId}/reviews/${runId}/source-files/${encodeURIComponent(selected.file_id)}`" :file-path="selected.file_path" :head-sha="headSha" :github-url="githubUrl" :line="selected.line" @close="selected=null" />

@@ -6,10 +6,10 @@ import AppIcon from '../../shared/ui/AppIcon.vue'
 import StatusBadge from '../../shared/ui/StatusBadge.vue'
 import AnalysisPanel from '../analysis/AnalysisPanel.vue'
 import type { PR, Review } from './types'
-const props = defineProps<{ workspaceId: string; userId: string; canManage: boolean; owner: boolean; pr: PR; reviews: Review[]; busy: boolean; loadedKind: string; githubUrl: string }>()
-defineEmits<{ close: []; reviews: [kind: string] }>()
+const props = defineProps<{ workspaceId: string; repositoryId?: string; userId: string; canManage: boolean; owner: boolean; pr: PR; reviews: Review[]; busy: boolean; loadedKind: string; githubUrl: string }>()
+defineEmits<{ close: []; standards: []; reviews: [kind: string] }>()
 const route = useRoute(), router = useRouter()
-const tabs = [{id:'overview',label:'한눈에 보기'},{id:'static',label:'코드 점검'},{id:'ai',label:'AI 리뷰'},{id:'activity',label:'변경 기록'}] as const
+const tabs = [{id:'overview',label:'한눈에 보기'},{id:'static',label:'코드 점검'},{id:'ai',label:'코드 리뷰'},{id:'security',label:'취약점'},{id:'standards',label:'팀 규칙'},{id:'activity',label:'변경 기록'}] as const
 const tab = computed(() => tabs.find(t => t.id === route.query.tab)?.id || 'overview')
 async function selectTab(id: string) { await router.push({path:route.path,query:{...route.query,tab:id}}) }
 async function tabKey(event: KeyboardEvent) {
@@ -33,7 +33,7 @@ const reviewKinds = [{ id: 'reviews', label: '리뷰' }, { id: 'comments', label
     <a :href="githubUrl" target="_blank" rel="noopener noreferrer" class="button secondary full-width">GitHub에서 변경 요청 보기 <AppIcon name="arrow" /></a>
     <div class="pr-tabs" role="tablist" aria-label="변경 요청 상세 보기" @keydown="tabKey"><button v-for="item in tabs" :id="'pr-tab-'+item.id" :key="item.id" role="tab" :aria-selected="tab===item.id" :tabindex="tab===item.id ? 0 : -1" aria-controls="pr-tab-panel" @click="selectTab(item.id)">{{ item.label }}</button></div>
     <div id="pr-tab-panel" role="tabpanel" :aria-labelledby="'pr-tab-'+tab">
-    <AnalysisPanel v-show="tab !== 'activity'" :mode="tab === 'activity' ? 'overview' : tab" @navigate="selectTab" :key="`${workspaceId}:${pr.id}`" :workspace-id="workspaceId" :pr-id="pr.id" :github-url="githubUrl" :head-sha="pr.head_sha" :user-id="userId" :can-manage="canManage" :owner="owner" />
+    <AnalysisPanel v-show="tab !== 'activity'" :mode="tab === 'activity' ? 'overview' : tab" @navigate="selectTab" :key="`${workspaceId}:${pr.id}`" :workspace-id="workspaceId" :repository-id="repositoryId" @standards="$emit('standards')" :pr-id="pr.id" :github-url="githubUrl" :head-sha="pr.head_sha" :user-id="userId" :can-manage="canManage" :owner="owner" />
     <div v-if="tab === 'activity'" class="detail-activity"><h4>리뷰와 변경 기록</h4><div class="segmented" aria-label="변경 기록 종류"><button v-for="kind in reviewKinds" :key="kind.id" :aria-pressed="loadedKind === kind.id" :disabled="busy" @click="$emit('reviews', kind.id)">{{ kind.label }}</button></div>
       <p class="helper">본문과 코드 변경 내용은 GitHub에서 확인할 수 있어요.</p>
       <p v-if="!loadedKind" class="empty-note">리뷰·대화·코드 의견·저장 기록 중 보고 싶은 내용을 선택하세요.</p>

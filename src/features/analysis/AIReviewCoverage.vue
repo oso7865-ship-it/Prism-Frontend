@@ -11,6 +11,7 @@ export interface ReviewCoverage {
   unfetched_files: number | null
   context_notes?: { file_id: string; reason: string }[]
   prior_feedback_count?: number
+  context_supplement?: { file_id: string; symbol: string; status: string }[]
 }
 const props = defineProps<{ coverage?: ReviewCoverage; githubUrl: string; headSha: string; workspaceId?: string; runId?: string; expanded?: boolean }>()
 const selected = ref<ReviewCoverage['files'][number] | null>(null), viewerId = useId(), viewer = ref<HTMLElement | null>(null)
@@ -61,6 +62,7 @@ const reasons: Record<string, string> = {
     <div v-if="selected && workspaceId && runId" :id="viewerId" ref="viewer" tabindex="-1"><ReviewCodeViewer :key="runId+selected.file_id" :endpoint="`/api/v1/workspaces/${workspaceId}/reviews/${runId}/source-files/${encodeURIComponent(selected.file_id)}`" :file-path="selected.file_path" :head-sha="headSha" :github-url="githubUrl" @close="closeFile" /></div>
     <p v-if="coverage.context_notes?.length" class="helper">가져오지 못한 코드와 이유: {{ coverage.context_notes.map(n => [coverage?.files.find(f => f.file_id === n.file_id)?.file_path, displayLabel(reasons, n.reason, '추가 코드를 가져오지 못함 · 이유 확인 필요')].filter(Boolean).join(' · ')).join(' / ') }}</p>
     <p v-if="coverage.prior_feedback_count !== undefined" class="helper">이전 검토 메모 {{ coverage.prior_feedback_count }}개 참고 · 코드가 사용되는 모든 경로를 확인한 것은 아니에요.</p>
+    <ul v-if="coverage.context_supplement?.length" class="helper"><li v-for="(item,index) in coverage.context_supplement" :key="index">{{ item.symbol }}의 추가 코드: {{ displayLabel({ADDED:'같은 버전의 코드를 더 확인했어요',ALREADY_PROVIDED:'이미 제공된 범위예요',FILE_TOO_LARGE:'파일이 커서 추가 범위를 확인하지 못했어요',BUDGET_LIMIT:'전송 크기 한도로 추가하지 못했어요',SOURCE_MISMATCH:'제공 코드와 일치하지 않아 추가하지 않았어요',SYMBOL_NOT_PROVIDED:'현재 코드에서 확인할 수 없는 식별자예요',UNAVAILABLE:'추가 코드를 가져오지 못했어요'},item.status,'추가 범위 확인 필요') }}</li></ul>
     <h5>제외한 파일 · {{ coverage.excluded.length }}개</h5>
     <p v-if="!coverage.excluded.length" class="helper">가져온 변경 파일 중 제외한 파일이 없습니다.</p>
     <ul v-else class="ai-coverage-list">

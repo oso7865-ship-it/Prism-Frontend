@@ -1,5 +1,7 @@
+import type { SuggestionCheck } from './ReviewSuggestionCheck.vue'
+import type { Citation } from '../standards/types'
 import type { Evidence } from './AIReviewEvidence.vue'
-export type ReviewIssue = Evidence & { key: string; file_path: string; line: number; severity: string; basis?: string; title: string; evidence: string; suggestion: string }
+export type ReviewIssue = Evidence & { origin?: string; suggestion_check?: SuggestionCheck; citations?: Citation[]; key: string; file_path: string; line: number; severity: string; basis?: string; title: string; evidence: string; suggestion: string }
 export type ReviewFeedback = { key: string; state: string; note: string; updated_at?: string }
 export const feedbackLabels: Record<string, string> = { OPEN: '확인 전', ACKNOWLEDGED: '확인 완료', PLANNED: '수정 예정', INTENDED: '의도한 동작', FALSE_POSITIVE: '문제로 보지 않음' }
 export function classifyReview(result: { issues: ReviewIssue[]; questions?: ReviewIssue[] }) {

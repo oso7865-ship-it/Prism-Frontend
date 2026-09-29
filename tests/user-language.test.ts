@@ -146,7 +146,7 @@ describe('API fixtures through rendered Vue screens', () => {
   it('keeps an existing static deep link while exposing plain-language tabs and actions', async () => {
     const request = vi.spyOn(authClient,'request').mockResolvedValue({items:[],active_rules:[],runner_enabled:true})
     const view = await mounted(PullRequestDetail,{...base,pr:{id:'p',pr_number:1,title:'변경 제목 원문',state:'OPEN',merge_status:'UNKNOWN',author_login:'author',head_sha:base.headSha,base_sha:null},reviews:[],busy:false,loadedKind:''},'/app/repositories?tab=static')
-    for (const label of ['한눈에 보기','코드 점검','AI 리뷰','변경 기록','코드 점검 시작','코드를 실행하지 않고 정해진 규칙']) expect(view.text()).toContain(label)
+    for (const label of ['한눈에 보기','코드 점검','코드 리뷰','취약점','팀 규칙','변경 기록','코드 점검 시작','코드를 실행하지 않고 정해진 규칙']) expect(view.text()).toContain(label)
     expect(view.html).toMatch(/id="pr-tab-static"[^>]*aria-selected="true"/)
     expect(view.text()).not.toMatch(/정적 분석|개요|현재 PR 분석/)
     expect(view.text()).toContain('변경 제목 원문')
