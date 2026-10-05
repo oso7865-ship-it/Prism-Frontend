@@ -70,6 +70,15 @@ summary .icon { vertical-align: middle; margin-right: 8px; }
 .account-panel { position: absolute; right: 0; top: calc(100% + 8px); width: 270px; max-width: calc(100vw - 32px); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; box-shadow: 0 8px 26px #26375016; overflow-wrap: anywhere; }
 .account-panel .account-login { margin: 2px 0 8px; color: var(--muted); font-size: 12px; }
 .account-panel .helper { margin-bottom: 16px; }
+.mode-picker { margin: 0 0 14px; padding: 12px 0 0; border: 0; border-top: 1px solid var(--line); min-width: 0; }
+.mode-picker legend { padding: 0; margin-bottom: 8px; font-size: 12px; font-weight: 700; }
+.mode-option { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; cursor: pointer; }
+.mode-option input { width: 20px; min-height: 20px; flex: 0 0 20px; margin: 2px 0 0; padding: 0; accent-color: var(--brand); }
+.mode-option > span { flex: 1; min-width: 0; }
+.mode-option strong { display: block; font-size: 13px; }
+.mode-option .helper { display: block; margin: 0; }
+.mode-picker .mode-note { margin: 4px 0 0; }
+.mode-picker--busy { opacity: .7; }
 .global-message { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 32px; background: var(--brand-soft); color: #364998; }
 .workspace-shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: calc(100vh - 136px); max-width: 1600px; margin: auto; }
 .workspace-sidebar { padding: 28px 16px; background: #fbfcfe; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 26px; }

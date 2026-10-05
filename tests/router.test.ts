@@ -9,7 +9,7 @@ vi.mock('../src/app/HomeView.vue', () => ({ default: {} }))
 vi.mock('../src/app/LoginView.vue', () => ({ default: {} }))
 vi.mock('../src/features/workspace/WorkspacePanel.vue', () => ({ default: {} }))
 
-const user = { id: 'user', login: 'reviewer', github_user_id: 1, display_name: null, avatar_url: null }
+const user = { id: 'user', login: 'reviewer', github_user_id: 1, display_name: null, avatar_url: null, review_mode: 'SENIOR' as const }
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); sessionUser.value = null })
 
 describe('page navigation with restored sessions', () => {

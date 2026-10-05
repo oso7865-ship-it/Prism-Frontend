@@ -1,11 +1,15 @@
 import { UserFacingError } from '../../shared/presentation'
 
+export type ReviewMode = 'JUNIOR' | 'SENIOR'
+export const reviewModes: ReviewMode[] = ['JUNIOR', 'SENIOR']
+
 export interface UserProfile {
   id: string
   github_user_id: number
   login: string
   display_name: string | null
   avatar_url: string | null
+  review_mode: ReviewMode
 }
 
 export class AuthError extends UserFacingError {
@@ -65,7 +69,23 @@ export function createAuthClient(fetcher: typeof fetch = fetch) {
       || !('avatar_url' in data) || !(data.avatar_url === null || typeof data.avatar_url === 'string')) {
       throw new UserFacingError('사용자 정보를 확인할 수 없습니다.')
     }
-    return data as UserProfile
+    return withReviewMode(data as Omit<UserProfile, 'review_mode'> & { review_mode?: unknown })
+  }
+
+  // An older server may omit the field: it behaves as the default senior mode.
+  function withReviewMode(data: Omit<UserProfile, 'review_mode'> & { review_mode?: unknown }): UserProfile {
+    const mode = data.review_mode
+    if (mode !== undefined && mode !== 'JUNIOR' && mode !== 'SENIOR') throw new UserFacingError('사용자 정보를 확인할 수 없습니다.')
+    return { ...data, review_mode: mode ?? 'SENIOR' }
+  }
+
+  async function updateReviewMode(mode: ReviewMode): Promise<UserProfile> {
+    const data = await request<Omit<UserProfile, 'review_mode'> & { review_mode?: unknown }>('/api/v1/users/me/preferences', {
+      method: 'PATCH', body: JSON.stringify({ review_mode: mode }),
+    })
+    const profile = withReviewMode(data)
+    if (profile.review_mode !== mode) throw new UserFacingError('설정을 확인할 수 없습니다.')
+    return profile
   }
 
   function logout(): Promise<void> {
@@ -99,7 +119,7 @@ export function createAuthClient(fetcher: typeof fetch = fetch) {
     }
     return response.status === 204 ? undefined as T : await response.json() as T
   }
-  return { currentUser, refresh, logout, request }
+  return { currentUser, refresh, logout, request, updateReviewMode }
 }
 
 export const authClient = createAuthClient()
