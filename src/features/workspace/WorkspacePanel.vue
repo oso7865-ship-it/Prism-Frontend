@@ -10,6 +10,9 @@ import AppIcon from '../../shared/ui/AppIcon.vue'
 import DisclosureSummary from '../../shared/ui/DisclosureSummary.vue'
 import StatusBadge from '../../shared/ui/StatusBadge.vue'
 import PullRequestDetail from './PullRequestDetail.vue'
+import RepositoryPicker from './RepositoryPicker.vue'
+import { pendingConnectResult } from './connectResult'
+import { startConnect } from './repositoryPicker'
 import StandardsPanel from '../standards/StandardsPanel.vue'
 import { findGitHubUser, type GitHubPerson } from './githubUser'
 import type { PR, Review } from './types'
@@ -51,7 +54,8 @@ async function revealCreateTeam() { toolsOpen.value = true; await nextTick(); if
 watch(() => route.path, async () => { message.value = ''; failed.value = false; await nextTick(); document.getElementById('page-title')?.focus({ preventScroll: true }) })
 const teams = ref<Team[]>([]), selected = ref(typeof route.query.team === 'string' ? route.query.team : ''), name = ref(''), busy = ref(false), message = ref('')
 const members = ref<Member[]>([]), invites = ref<Invite[]>([]), repos = ref<Repo[]>([])
-const target = ref(''), inviteRole = ref('MEMBER'), token = ref(''), inviteLink = ref(''), fullName = ref('')
+const target = ref(''), inviteRole = ref('MEMBER'), token = ref(''), inviteLink = ref('')
+const pickerOpen = ref(false)
 const app = ref<{ configured: boolean; installation_url: string | null }>({ configured: false, installation_url: null })
 const activeRepo = ref<Repo | null>(null), prs = ref<PR[]>([]), sync = ref<Sync | null>(null), detail = ref<PR | null>(null), reviews = ref<Review[]>([])
 const team = computed(() => teams.value.find(t => t.id === selected.value))
@@ -116,7 +120,14 @@ async function accept() { const joined = await api<Team>('/api/v1/invitations/ac
 async function remove(member: Member) { if (!confirm('이 멤버의 팀 접근을 종료할까요?')) return; await api(`${base()}/members/${member.user_id}`, { method: 'DELETE' }); await loadTeams() }
 async function role(member: Member) { await api(`${base()}/members/${member.user_id}`, json('PATCH', { role: member.role === 'ADMIN' ? 'MEMBER' : 'ADMIN' })); await loadTeam() }
 async function transfer(member: Member) { if (!confirm(ownershipTransferMessage)) return; await api(`${base()}/transfer-ownership`, json('POST', { user_id: member.user_id })); await loadTeams() }
-async function connect() { const start = await api<{ authorization_url: string }>(`${base()}/repositories/connect`, json('POST', { full_name: fullName.value.trim() })); const url = new URL(start.authorization_url); if (url.origin !== 'https://github.com' || url.pathname !== '/login/oauth/authorize') throw new UserFacingError('연결 주소를 확인할 수 없습니다.'); location.assign(url.href) }
+async function startPicking() {
+  window.location.assign(await startConnect(selected.value))
+}
+async function connectedFromPicker() {
+  repos.value = await all<Repo>(`${base()}/repositories`)
+  if (!activeRepo.value) { const first = repos.value.find(r => r.status === 'ACTIVE'); if (first) await openRepo(first, false) }
+  message.value = '저장소를 연결했어요. 변경 요청을 가져오고 있어요.'
+}
 async function disconnect(repo: Repo) { if (!confirm('저장소 연결을 해제할까요? 새 변경 요청을 가져오지 않아요.')) return; await api(`${base()}/repositories/${repo.id}`, { method: 'DELETE' }); await loadTeam() }
 async function openRepo(repo: Repo, navigate = true) { const result = await all<PR>(`${base()}/repositories/${repo.id}/pull-requests`); activeRepo.value = repo; query.value = ''; stateFilter.value = 'ALL'; loadedKind.value = '';  detail.value = null; reviews.value = []; sync.value = await api<Sync | null>(`${base()}/repositories/${repo.id}/syncs/latest`); prs.value = result; if (navigate) await router.push({ path: '/app/repositories', query: { team: selected.value, repo: repo.id } }) }
 async function requestSync(page = 1) { if (!activeRepo.value) return; sync.value = await api<Sync>(`${base()}/repositories/${activeRepo.value.id}/syncs`, json('POST', { page })); message.value = '변경 요청을 가져오기 시작했어요. 진행 상황 확인을 눌러 결과를 확인하세요.' }
@@ -140,6 +151,13 @@ watch(() => [route.fullPath, busy.value, initialized.value] as const, async () =
 })
 async function loadReviews(kind: string) { if (!detail.value) return; const result = await api<Page<Review>>(`${base()}/pull-requests/${detail.value.id}/github-reviews?kind=${kind}`); reviews.value = result.items; loadedKind.value = kind; message.value = result.next_cursor ? '최근 응답 30개를 표시합니다. 나머지는 GitHub에서 확인하세요.' : '조회했습니다.' }
 onMounted(() => { const pending = new URLSearchParams(location.hash.slice(1)).get('invite'); if (pending) { toolsOpen.value = true; token.value = pending; if (joinDisclosure.value) joinDisclosure.value.open = true; void router.replace({ path: route.path, query: route.query, hash: '' }) } void action(async () => { app.value = await api('/api/v1/github-app'); await loadTeams(); initialized.value = true }) })
+function handleUnauthorized() { sessionUser.value = null; void router.replace(loginLocation(router.currentRoute.value.fullPath)) }
+// Back from GitHub: show the list of repositories GitHub allowed once the team is loaded.
+watch(() => [pendingConnectResult.value, initialized.value] as const, ([result, ready]) => {
+  if (result !== 'choose' || !ready) return
+  pendingConnectResult.value = ''
+  if (canManage.value && selected.value) { pickerOpen.value = true; repoToolsOpen.value = true }
+}, { immediate: true })
 </script>
 
 <template>
@@ -187,8 +205,9 @@ onMounted(() => { const pending = new URLSearchParams(location.hash.slice(1)).ge
         <section class="surface repository-section" :class="{ 'show-repo-tools': repoToolsOpen }" aria-labelledby="repository-title">
           <div class="mobile-repo-picker"><label>저장소<select :value="activeRepo?.id" :disabled="busy" @change="action(() => openRepo(repos.find(r => r.id === ($event.target as HTMLSelectElement).value)!))"><option v-for="r in repos" :key="r.id" :value="r.id" :disabled="r.status !== 'ACTIVE'">{{ r.owner_login }}/{{ r.repository_name }}</option></select></label><button class="text-button" :aria-expanded="repoToolsOpen" @click="repoToolsOpen = !repoToolsOpen">{{ repoToolsOpen ? '관리 접기' : '저장소 관리' }}</button></div><div class="section-heading repository-heading"><div><h2 id="repository-title">연결된 저장소 <span class="count">{{ repos.length }}</span></h2><p class="helper">저장소를 선택하면 변경 요청(PR)을 볼 수 있어요.</p></div></div>
           <div v-if="!app.configured" class="notice">GitHub 연결 준비가 필요해요. 서비스 관리자에게 연결 설정을 요청해 주세요.</div>
-          <details v-if="canManage && app.configured" class="connect-disclosure"><DisclosureSummary class="connect-summary"><AppIcon name="plus" />저장소 연결</DisclosureSummary><div class="connect-body"><div><h3>GitHub 저장소 연결</h3><p class="helper">이 저장소의 변경 요청, 리뷰 결과, 리뷰에 필요한 일부 코드가 팀 멤버에게 공유돼요.</p><a :href="app.installation_url!" target="_blank" rel="noopener noreferrer" class="button secondary">1. GitHub 연결 앱 설치 <AppIcon name="arrow" /></a></div><form class="stack-form" @submit.prevent="action(connect)"><label>2. GitHub 계정명/저장소명<input v-model="fullName" placeholder="예: octocat/hello-world" required :disabled="busy" /></label><button :disabled="busy">권한 확인 후 연결 <AppIcon name="arrow" /></button></form></div></details>
-          <div v-if="!repos.length && !busy" class="empty-state compact"><AppIcon name="repo" /><h3>아직 연결된 저장소가 없어요</h3><p>{{ canManage ? '저장소 연결을 눌러 첫 저장소를 추가하세요.' : '팀 관리자에게 저장소 연결을 요청하세요.' }}</p></div>
+          <div v-if="canManage && app.configured" class="connect-disclosure"><div class="connect-body"><div><h3>GitHub 저장소 연결</h3><p class="helper">GitHub에서 허용한 저장소를 모두 불러와요. 그중 연결할 저장소만 골라 체크하면 돼요.</p></div><div class="connect-action"><button :disabled="busy" @click="action(startPicking)"><AppIcon name="plus" />GitHub에서 저장소 가져오기</button></div></div></div>
+          <RepositoryPicker v-if="pickerOpen && canManage && selected" :key="selected" :workspace-id="selected" :installation-url="app.installation_url" @close="pickerOpen = false" @connected="action(connectedFromPicker)" @restart="action(startPicking)" @unauthorized="handleUnauthorized" />
+          <div v-if="!repos.length && !busy" class="empty-state compact"><AppIcon name="repo" /><h3>아직 연결된 저장소가 없어요</h3><p>{{ canManage ? '‘GitHub에서 저장소 가져오기’를 눌러 첫 저장소를 추가하세요.' : '팀 관리자에게 저장소 연결을 요청하세요.' }}</p></div>
           <ul v-else class="repository-list"><li v-for="r in repos" :key="r.id" :class="{ 'is-selected': activeRepo?.id === r.id }"><button class="repository-select" :disabled="busy || r.status !== 'ACTIVE'" :aria-pressed="activeRepo?.id === r.id" @click="action(() => openRepo(r))"><span class="repo-icon"><AppIcon name="repo" /></span><span class="repository-name"><strong>{{ r.repository_name }}</strong><span>{{ r.owner_login }}</span></span><StatusBadge :value="r.status" /></button><details v-if="canManage && r.status !== 'DISCONNECTED'" class="repository-manage"><DisclosureSummary :aria-label="`${r.repository_name} 연결 관리`">관리</DisclosureSummary><div><p class="helper">연결을 해제하면 이 저장소의 새 변경 요청을 가져오지 않아요.</p><button class="danger-button" :disabled="busy" @click="action(() => disconnect(r))">연결 해제</button></div></details></li></ul>
         </section>
 
