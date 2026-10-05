@@ -7,12 +7,14 @@ import { authClient, type ReviewMode } from '../features/auth/api'
 import { sessionUser } from '../features/auth/session'
 import { checkReadiness } from '../shared/api/health'
 import { clearReturn } from '../features/auth/returnLocation'
+import { pendingConnectResult } from '../features/workspace/connectResult'
 const router = useRouter(), route = useRoute()
 const busy = ref(false), message = ref(''), state = ref('확인 전'), checking = ref(false)
 const modeBusy = ref(false), modeError = ref('')
 const result = route.query.repository_result
 if (result) {
-  message.value = result === 'connected' ? '저장소를 연결했어요. 최신 변경 요청을 가져오고 있어요.' : '저장소 연결을 완료하지 못했어요. 설치·관리자 권한을 확인하고 다시 시도하세요.'
+  if (result === 'choose') pendingConnectResult.value = 'choose'
+  else message.value = result === 'cancelled' ? '저장소 가져오기를 취소했어요. 필요하면 다시 시도해 주세요.' : '저장소를 가져오지 못했어요. GitHub 연결 상태를 확인하고 다시 시도해 주세요.'
   const query = { ...route.query }; delete query.repository_result
   void router.replace({ path: route.path, query, hash: route.hash })
 }
