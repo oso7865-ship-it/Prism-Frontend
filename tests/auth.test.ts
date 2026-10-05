@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createAuthClient } from '../src/features/auth/api'
 
-const profile = { id: 'user-id', github_user_id: 42, login: 'test-user', display_name: null, avatar_url: null }
+const profile = { id: 'user-id', github_user_id: 42, login: 'test-user', display_name: null, avatar_url: null, review_mode: 'SENIOR' }
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status })
 
 describe('auth session', () => {
