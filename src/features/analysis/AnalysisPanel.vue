@@ -143,6 +143,6 @@ onUnmounted(()=>{disposed=true;clearTimeout(timer)})
     <div v-if="mode === 'standards'" class="standard-management-entry"><p class="helper">우리 팀의 문서에서 적용할 규칙을 찾아 검토해요. 팀 문서 관리에서 검토할 문서와 적용 범위를 확인하세요.</p><button class="secondary" @click="emit('standards')">팀 문서 관리</button></div>
     <SecuritySignals v-if="current?.status === 'COMPLETED' && mode === 'security'" :key="'security-' + current.id" :workspace-id="workspaceId" :analysis-id="current.id" :head-sha="current.head_sha" :github-url="githubUrl" />
     <AIReviewPanel v-if="current?.status === 'COMPLETED' && aiMode" :key="current.id + purpose" :workspace-id="workspaceId" :repository-id="repositoryId" :analysis-id="current.id" :purpose="purpose" :github-url="githubUrl" :owner="owner" />
-    <details v-if="mode === 'static'" class="analysis-rules"><DisclosureSummary>점검 가능한 언어와 기준 {{ rules.length }}개</DisclosureSummary><p class="helper">Java · Python · JavaScript · TypeScript 코드를 점검해요. .vue 파일 등 지원하지 않는 코드에서는 비밀정보가 의심되는 글자 패턴만 확인해요. 한 번에 최대 100개 파일, 파일당 200KiB, 전체 2MiB, 120초까지 점검해요. 모든 보안 문제나 자료형 오류를 확인하는 검사는 아니에요.</p><p class="helper">{{ rules.join(' · ') }}</p></details>
+    <details v-if="mode === 'static'" class="analysis-rules"><DisclosureSummary>점검 가능한 언어와 기준 {{ rules.length }}개</DisclosureSummary><p class="helper">Java · Python · JavaScript · TypeScript 코드를 점검해요. .vue 파일 등 지원하지 않는 코드에서는 비밀정보가 의심되는 글자 패턴만 확인해요. 한 번에 최대 100개 파일, 파일당 200KiB, 전체 3MiB, 120초까지 점검해요. 모든 보안 문제나 자료형 오류를 확인하는 검사는 아니에요.</p><p class="helper">{{ rules.join(' · ') }}</p></details>
   </section>
 </template>
